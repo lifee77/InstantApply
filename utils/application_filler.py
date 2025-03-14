@@ -1,21 +1,16 @@
 import logging
 from typing import Dict, Any, List
+import asyncio
 import openai
 from flask import current_app
 from models.user import User
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from playwright.async_api import async_playwright, Playwright
 
 logger = logging.getLogger(__name__)
 
-def extract_application_questions(job_id: str) -> List[Dict[str, Any]]:
+async def extract_application_questions_async(job_id: str) -> List[Dict[str, Any]]:
     """
-    Extract application questions from a job posting
+    Extract application questions from a job posting using Playwright
     
     Args:
         job_id: The Indeed job ID
@@ -25,79 +20,87 @@ def extract_application_questions(job_id: str) -> List[Dict[str, Any]]:
     """
     questions = []
     
-    try:
-        # Setup headless Chrome browser
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        
-        driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
-            options=chrome_options
-        )
-        
-        # Navigate to the application page
-        driver.get(f"https://www.indeed.com/viewjob?jk={job_id}&apply=1")
-        
-        # Wait for application form to load
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "form")))
-        
-        # Find all question fields
-        form_elements = driver.find_elements(By.CSS_SELECTOR, "div.ia-Questions-item")
-        
-        for element in form_elements:
-            question_text = element.find_element(By.CSS_SELECTOR, "label").text.strip()
+    async with async_playwright() as p:
+        try:
+            # Launch browser in headless mode
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context()
+            page = await context.new_page()
             
-            # Determine question type
-            input_element = None
-            question_type = "text"
+            # Navigate to the application page
+            await page.goto(f"https://www.indeed.com/viewjob?jk={job_id}&apply=1")
             
-            try:
-                # Check for text input
-                input_element = element.find_element(By.CSS_SELECTOR, "input[type='text']")
-                question_type = "text"
-            except:
-                try:
-                    # Check for textarea
-                    input_element = element.find_element(By.CSS_SELECTOR, "textarea")
-                    question_type = "textarea"
-                except:
-                    try:
-                        # Check for radio buttons
-                        input_element = element.find_elements(By.CSS_SELECTOR, "input[type='radio']")
-                        question_type = "radio"
-                    except:
-                        try:
-                            # Check for checkboxes
-                            input_element = element.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
-                            question_type = "checkbox"
-                        except:
-                            # If no input element is found, skip this question
-                            continue
+            # Wait for application form to load
+            await page.wait_for_selector("form", timeout=10000)
             
-            # Add question to list
-            question = {
-                "text": question_text,
-                "type": question_type
-            }
+            # Find all question fields
+            form_elements = await page.query_selector_all("div.ia-Questions-item")
             
-            # For radio/checkbox, get options
-            if question_type in ["radio", "checkbox"] and isinstance(input_element, list):
-                options = []
-                for option in input_element:
-                    label = option.find_element(By.XPATH, "following-sibling::label")
-                    options.append(label.text.strip())
-                question["options"] = options
+            for element in form_elements:
+                label_element = await element.query_selector("label")
+                if not label_element:
+                    continue
+                    
+                question_text = await label_element.inner_text()
+                question_text = question_text.strip()
                 
-            questions.append(question)
-        
-        driver.quit()
-        
-    except Exception as e:
-        logger.error(f"Error extracting application questions: {str(e)}")
+                # Determine question type
+                question_type = "text"
+                
+                # Check for text input
+                text_input = await element.query_selector("input[type='text']")
+                if text_input:
+                    question_type = "text"
+                else:
+                    # Check for textarea
+                    textarea = await element.query_selector("textarea")
+                    if textarea:
+                        question_type = "textarea"
+                    else:
+                        # Check for radio buttons
+                        radio_buttons = await element.query_selector_all("input[type='radio']")
+                        if radio_buttons:
+                            question_type = "radio"
+                        else:
+                            # Check for checkboxes
+                            checkboxes = await element.query_selector_all("input[type='checkbox']")
+                            if checkboxes:
+                                question_type = "checkbox"
+                            else:
+                                # If no input element is found, skip this question
+                                continue
+                
+                # Add question to list
+                question = {
+                    "text": question_text,
+                    "type": question_type
+                }
+                
+                # For radio/checkbox, get options
+                if question_type in ["radio", "checkbox"]:
+                    options = []
+                    option_elements = await element.query_selector_all("label:not(:first-child)")
+                    
+                    for option_elem in option_elements:
+                        option_text = await option_elem.inner_text()
+                        options.append(option_text.strip())
+                    
+                    question["options"] = options
+                    
+                questions.append(question)
+            
+            await browser.close()
+            
+        except Exception as e:
+            logger.error(f"Error extracting application questions: {str(e)}")
     
     return questions
+
+def extract_application_questions(job_id: str) -> List[Dict[str, Any]]:
+    """
+    Synchronous wrapper for the async extract_application_questions_async function
+    """
+    return asyncio.run(extract_application_questions_async(job_id))
 
 def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
     """
