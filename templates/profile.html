@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - InstantApply</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>InstantApply</h1>
+        <p>Automated Job Application Assistant</p>
+        <nav>
+            <a href="/">Home</a> | 
+            <a href="/profile">Profile</a> |
+            <a href="/applications">My Applications</a>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="profile-section">
+            <h2>Your Profile</h2>
+            <p>Complete your profile to enable automatic job applications</p>
+            
+            <form id="user-profile-form">
+                <div class="form-group">
+                    <label for="user-name">Full Name</label>
+                    <input type="text" id="user-name" name="user-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-email">Email</label>
+                    <input type="email" id="user-email" name="user-email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-resume">Resume</label>
+                    <textarea id="user-resume" name="user-resume" rows="5" placeholder="Paste your resume text here or upload a file"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-resume-file">Upload Resume</label>
+                    <input type="file" id="user-resume-file" name="user-resume-file" accept=".pdf,.doc,.docx">
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-skills">Skills</label>
+                    <textarea id="user-skills" name="user-skills" rows="3" placeholder="List your skills, separated by commas"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-experience">Experience</label>
+                    <textarea id="user-experience" name="user-experience" rows="5" placeholder="Describe your work experience"></textarea>
+                </div>
+                
+                <button type="submit">Save Profile</button>
+            </form>
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023 InstantApply</p>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Applications - InstantApply</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>InstantApply</h1>
+        <p>Automated Job Application Assistant</p>
+        <nav>
+            <a href="/">Home</a> | 
+            <a href="/profile">Profile</a> |
+            <a href="/applications">My Applications</a>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="applications-section">
+            <h2>My Applications</h2>
+            <p>Track the status of your submitted applications</p>
+            
+            <div id="applications-container">
+                <p>Loading your applications...</p>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023 InstantApply</p>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userId = localStorage.getItem('userId');
+            const applicationsContainer = document.getElementById('applications-container');
+            
+            if (!userId) {
+                applicationsContainer.innerHTML = '<p>Please complete your profile before viewing applications.</p>';
+                return;
+            }
+            
+            fetch(`/api/applications/${userId}`)
+                .then(response => response.json())
+                .then(applications => {
+                    if (applications.length === 0) {
+                        applicationsContainer.innerHTML = '<p>You haven\'t submitted any applications yet.</p>';
+                        return;
+                    }
+                    
+                    let html = '<table class="applications-table">';
+                    html += '<thead><tr><th>Company</th><th>Position</th><th>Status</th><th>Submitted</th></tr></thead>';
+                    html += '<tbody>';
+                    
+                    applications.forEach(app => {
+                        const submittedDate = new Date(app.submitted_at).toLocaleDateString();
+                        html += `
+                            <tr>
+                                <td>${app.company}</td>
+                                <td>${app.position}</td>
+                                <td>${app.status}</td>
+                                <td>${submittedDate}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    applicationsContainer.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    applicationsContainer.innerHTML = '<p>An error occurred while fetching your applications. Please try again later.</p>';
+                });
+        });
+    </script>
+</body>
+</html>
