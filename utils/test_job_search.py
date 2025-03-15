@@ -4,6 +4,10 @@ import os
 import logging
 import json
 import time
+from dotenv import load_dotenv
+
+# Ensure environment variables are loaded
+load_dotenv()
 
 # Add project root to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -14,6 +18,13 @@ def run_test():
     """Test job search functionality"""
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
+    
+    # Print environment check
+    api_key = os.environ.get('RAPID_API_KEY', '')
+    if api_key:
+        logger.info(f"RAPID_API_KEY is set: {api_key[:4]}...{api_key[-4:]} ({len(api_key)} characters)")
+    else:
+        logger.warning("RAPID_API_KEY is not set in environment")
     
     # Test case 1: Mock data
     logger.info("TEST 1: Using mock data")
@@ -29,7 +40,7 @@ def run_test():
         print(f"  description: {job.get('description_snippet', 'N/A')}")
     
     # Test case 2: Real search
-    logger.info("\nTEST 2: Running actual search")
+    logger.info("\nTEST 2: Running actual search with API")
     start_time = time.time()
     jobs = search_jobs("Software Developer", "Remote")
     end_time = time.time()

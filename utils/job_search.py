@@ -5,6 +5,10 @@ import os
 import json
 import requests
 from typing import List, Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +132,13 @@ def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
     Returns:
         List of job dictionaries containing job details
     """
+    # Get API key and log what we found (for debugging)
     api_key = os.environ.get('RAPID_API_KEY', '')
+    
+    if api_key:
+        logger.info(f"Found RAPID_API_KEY: {api_key[:5]}...{api_key[-5:]} ({len(api_key)} chars)")
+    else:
+        logger.warning("RAPID_API_KEY not found in environment variables")
     
     # If API key is not set, fall back to mock data
     if not api_key:
