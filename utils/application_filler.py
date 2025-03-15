@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any, List
 import asyncio
-import openai
+import google.generativeai as genai
 from flask import current_app
 from models.user import User
 from playwright.async_api import async_playwright, Playwright
@@ -102,9 +102,17 @@ def extract_application_questions(job_id: str) -> List[Dict[str, Any]]:
     """
     return asyncio.run(extract_application_questions_async(job_id))
 
-def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
+def setup_gemini():
+    """Configure the Gemini API"""
+    api_key = current_app.config.get('GEMINI_API_KEY')
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY is not set in configuration")
+    
+    genai.configure(api_key=api_key)
+
+def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]]:
     """
-    Generate responses to job application questions using AI
+    Generate responses to job application questions using Gemini AI
     
     Args:
         job_id: The Indeed job ID
@@ -113,8 +121,9 @@ def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
     Returns:
         Dictionary of question responses
     """
-    # Set OpenAI API key
-    openai.api_key = current_app.config.get('OPENAI_API_KEY')
+    # Setup Gemini API
+    setup_gemini()
+    model = genai.GenerativeModel(current_app.config.get('GEMINI_MODEL', 'gemini-pro'))
     
     # Extract questions from job application
     questions = extract_application_questions(job_id)
@@ -123,7 +132,7 @@ def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
     responses = {}
     
     try:
-        # For each question, generate a response using AI
+        # For each question, generate a response using Gemini
         for question in questions:
             question_text = question["text"]
             question_type = question["type"]
@@ -140,16 +149,11 @@ def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
             Response should be concise, professional, and tailored to the question.
             """
             
-            # Get response from OpenAI
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are an expert job application assistant."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
+            # Get response from Gemini
+            response = model.generate_content(prompt)
             
-            answer = response.choices[0].message.content.strip()
+            # Extract the answer text
+            answer = response.text.strip()
             
             # Format response based on question type
             if question_type in ["text", "textarea"]:
@@ -158,7 +162,7 @@ def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
                 # For multiple choice questions, select the best option
                 options = question.get("options", [])
                 if options:
-                    # Ask AI to choose the best option from the available options
+                    # Ask Gemini to choose the best option from the available options
                     option_prompt = f"""
                     Based on the user profile, which of these options is the best response for the job application question: "{question_text}"
                     
@@ -173,16 +177,24 @@ def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
                     Just return the exact text of the best option, nothing else.
                     """
                     
-                    option_response = openai.ChatCompletion.create(
-                        model="gpt-4",
-                        messages=[
-                            {"role": "system", "content": "You are an expert job application assistant."},
-                            {"role": "user", "content": option_prompt}
-                        ]
-                    )
+                    option_response = model.generate_content(option_prompt)
+                    chosen_option = option_response.text.strip()
                     
-                    chosen_option = option_response.choices[0].message.content.strip()
-                    responses[question_text] = chosen_option
+                    # Find the closest matching option
+                    best_match = None
+                    best_match_score = 0
+                    for option in options:
+                        # Simple matching algorithm - can be improved
+                        if option.lower() in chosen_option.lower():
+                            if len(option) > best_match_score:
+                                best_match = option
+                                best_match_score = len(option)
+                    
+                    # If no good match found, use the first option
+                    if not best_match and options:
+                        best_match = options[0]
+                        
+                    responses[question_text] = best_match or chosen_option
     
     except Exception as e:
         logger.error(f"Error generating application responses: {str(e)}")

@@ -6,7 +6,7 @@ An AI-powered job application assistant that automatically fills out and submits
 
 - Search for jobs on Indeed based on job title and location
 - Extract application questions from job postings
-- Generate intelligent responses to application questions using AI
+- Generate intelligent responses to application questions using Google Gemini 2.0
 - Automatically fill and submit applications
 - Track application status
 
@@ -16,7 +16,7 @@ An AI-powered job application assistant that automatically fills out and submits
 
 - Python 3.8+
 - Node.js (required for Playwright)
-- OpenAI API key
+- Google Gemini API key
 
 ### Installation
 
@@ -39,15 +39,19 @@ pip install -r requirements.txt
 
 4. Install Playwright browsers:
 ```
-python setup_playwright.py
+python -m playwright install chromium
 ```
 
-5. Set environment variables:
+5. Set up your Google Gemini API key:
+```
+python setup_gemini.py
+```
+
+6. Set environment variables:
 ```
 export FLASK_APP=app.py
 export FLASK_DEBUG=1
 export SECRET_KEY=your_secret_key
-export OPENAI_API_KEY=your_openai_api_key
 ```
 
 On Windows:
@@ -55,16 +59,21 @@ On Windows:
 set FLASK_APP=app.py
 set FLASK_DEBUG=1
 set SECRET_KEY=your_secret_key
-set OPENAI_API_KEY=your_openai_api_key
 ```
 
-6. Initialize the database:
+7. Initialize the database:
 ```
 flask shell
 >>> from app import db
 >>> db.create_all()
 >>> exit()
 ```
+
+### Getting a Gemini API Key
+
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a new API key
+3. Use the setup script to configure your key: `python setup_gemini.py`
 
 ### Running the Application
 
@@ -80,7 +89,7 @@ Navigate to `http://localhost:5000` in your browser.
 - `config.py` - Configuration settings
 - `utils/` - Utility modules
   - `indeed_scraper.py` - Indeed job search functionality
-  - `application_filler.py` - AI-powered form filling
+  - `application_filler.py` - AI-powered form filling using Gemini
   - `job_submitter.py` - Job submission handling
 - `models/` - Database models
   - `user.py` - User model definitions
@@ -95,7 +104,7 @@ Navigate to `http://localhost:5000` in your browser.
 4. Users select jobs to apply for
 5. The AI automatically:
    - Extracts application questions
-   - Generates appropriate responses
+   - Generates appropriate responses using Gemini 2.0
    - Fills out the application form
    - Submits the application
 
