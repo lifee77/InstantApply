@@ -7,7 +7,7 @@ import os
 # Add the project directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils.indeed_scraper import search_jobs
+from utils.job_search.indeed_scraper import search_jobs
 
 def test_scraper():
     """Test the Indeed job scraper with a sample search"""

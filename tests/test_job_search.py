@@ -12,7 +12,7 @@ load_dotenv()
 # Add project root to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils.job_search import search_jobs, search_jobs_mock
+from utils.job_search.job_search import search_jobs, search_jobs_mock
 
 def run_test():
     """Test job search functionality"""
