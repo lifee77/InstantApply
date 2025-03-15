@@ -1,0 +1,47 @@
+[
+  {
+    "title": "Software Engineer - Hybrid",
+    "company": "CodeMasters Inc.",
+    "location": "Remote",
+    "description_snippet": "We're looking for an experienced Software Engineer to join our team. You'll be working on exciting projects with cutting-edge technology.",
+    "url": "https://example.com/jobs/1",
+    "id": "mock-1",
+    "source": "Mock Data"
+  },
+  {
+    "title": "Software Engineer - Contract",
+    "company": "CodeMasters Inc.",
+    "location": "Remote",
+    "description_snippet": "We're looking for an experienced Software Engineer to join our team. You'll be working on exciting projects with cutting-edge technology.",
+    "url": "https://example.com/jobs/2",
+    "id": "mock-2",
+    "source": "Mock Data"
+  },
+  {
+    "title": "Software Engineer - Contract",
+    "company": "ByteWorks Inc.",
+    "location": "Remote",
+    "description_snippet": "We're looking for an experienced Software Engineer to join our team. You'll be working on exciting projects with cutting-edge technology.",
+    "url": "https://example.com/jobs/3",
+    "id": "mock-3",
+    "source": "Mock Data"
+  },
+  {
+    "title": "Software Engineer - Contract",
+    "company": "CodeMasters Inc.",
+    "location": "Remote",
+    "description_snippet": "We're looking for an experienced Software Engineer to join our team. You'll be working on exciting projects with cutting-edge technology.",
+    "url": "https://example.com/jobs/4",
+    "id": "mock-4",
+    "source": "Mock Data"
+  },
+  {
+    "title": "Software Engineer - Contract",
+    "company": "InnoSoft Inc.",
+    "location": "Remote",
+    "description_snippet": "We're looking for an experienced Software Engineer to join our team. You'll be working on exciting projects with cutting-edge technology.",
+    "url": "https://example.com/jobs/5",
+    "id": "mock-5",
+    "source": "Mock Data"
+  }
+]

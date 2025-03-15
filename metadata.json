@@ -1,0 +1,45 @@
+{
+  "name": "InstantApply",
+  "version": "1.0.0",
+  "description": "AI-powered job application assistant that helps users manage and submit job applications efficiently",
+  "author": "Jane",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jane/InstantApply"
+  },
+  "main": "app.py",
+  "entry_points": {
+    "app": "app:app"
+  },
+  "environment": {
+    "FLASK_APP": "app.py",
+    "FLASK_ENV": "production"
+  },
+  "requirements": [
+    "flask",
+    "flask-cors",
+    "flask-login",
+    "sqlalchemy",
+    "google-generativeai"
+  ],
+  "tags": [
+    "job-application",
+    "flask",
+    "ai-assistant"
+  ],
+  "category": "productivity",
+  "details": {
+    "homepage": "https://instantapply.app",
+    "documentation": "https://docs.instantapply.app",
+    "features": [
+      "AI-powered resume analysis",
+      "Auto-fill job applications",
+      "Track application status",
+      "Personalized cover letter generation"
+    ],
+    "usage": "Run the application with 'python app.py' and navigate to localhost:5000",
+    "technologies": ["Flask", "SQLite", "Google Gemini API"]
+  },
+  "show_entry": true
+}
