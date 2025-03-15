@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 # Update import to use the new job_search module
 from utils.job_search import search_jobs
 from utils.application_filler import generate_application_responses
-from utils.job_submitter import submit_application
+from utils.job_search.job_submitter import submit_application
 from utils.document_parser import parse_and_save_resume, get_resume_file
 from models.user import User, db
 from models.application import Application
