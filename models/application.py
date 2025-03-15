@@ -28,3 +28,14 @@ class Application(db.Model):
             'submitted_at': self.submitted_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+    
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            user_id=data.get('user_id'),
+            job_id=data.get('job_id'),
+            company=data.get('company'),
+            position=data.get('position'),
+            status=data.get('status'),
+            response_data=data.get('response_data')
+        )
