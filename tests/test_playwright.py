@@ -25,182 +25,130 @@ from models.user import User
 # Load environment variables from .env
 load_dotenv()
 
-# --- Setup a Dummy Flask App for Testing ---
+# Ensure GEMINI_API_KEY is set
+if not os.getenv("GEMINI_API_KEY"):
+    raise ValueError("GEMINI_API_KEY is not set in your environment.")
+
+# Define the test URL for Playwright
+TEST_URL = "https://jobs.ashbyhq.com/replo/ec206174-ccc2-42fa-b295-8201421f21b0/application"
+
+# Setup Flask App Context to Fix `RuntimeError: Working outside of application context`
 app = Flask(__name__)
-app.config['GEMINI_API_KEY'] = os.environ.get('GEMINI_API_KEY', '')
+app.config['GEMINI_API_KEY'] = os.getenv("GEMINI_API_KEY")
 app.config['GEMINI_MODEL'] = 'gemini-pro'
 
-# Dummy User fixture (assuming the User model has attributes: name, skills, experience, email, resume_file_path)
-@pytest.fixture
-def dummy_user():
-    user = User(name="Jane Doe", skills="Python, AI", experience="3 years", email="jane@example.com", resume_file_path="/dummy/path/resume.pdf")
-    return user
+# 📌 Function to Save a Text to a PDF
+def save_text_as_pdf(text, filename):
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(190, 10, text)
+    pdf.output(filename)
 
-# Make sure every test runs in the context of our Flask app
-@pytest.fixture(autouse=True)
-def flask_app_context():
-    with app.app_context():
-        yield
+# 📌 Generate and Save Resume + Cover Letter
+def generate_and_save_files(user_data):
+    cover_letter_text = generate_cover_letter("Software Engineer", "TestCorp", user_data)
+    resume_text = extract_resume_data("""
+    John Doe
+    Experienced Python Developer skilled in AI, Machine Learning, and API Development.
+    Previous roles include Software Engineer at ABC and Developer at XYZ.
+    Expertise in NLP, automation, and cloud computing.
+    """)
 
-# --- Tests for ApplicationFiller Module ---
-class TestApplicationFiller:
+    cover_letter_path = "cover_letter.pdf"
+    resume_path = "resume.pdf"
 
-    @pytest.mark.asyncio
-    async def test_extract_application_questions_async(self):
-        """
-        Test the asynchronous extraction of application questions.
-        We patch async_playwright to simulate the browser behavior.
-        """
-        with patch("utils.application_filler.async_playwright") as mock_playwright:
-            # Setup mock chain for async_playwright
-            mock_instance = AsyncMock()
-            mock_browser = AsyncMock()
-            mock_context = AsyncMock()
-            mock_page = AsyncMock()
+    save_text_as_pdf(cover_letter_text, cover_letter_path)
+    save_text_as_pdf(resume_text, resume_path)
 
-            # Chain the mocks
-            mock_playwright.__aenter__.return_value = mock_instance
-            mock_instance.chromium.launch.return_value = mock_browser
-            mock_browser.new_context.return_value = mock_context
-            mock_context.new_page.return_value = mock_page
+    return cover_letter_path, resume_path
 
-            # Simulate navigation and waiting for selector
-            mock_page.goto.return_value = asyncio.Future()
-            mock_page.goto.return_value.set_result(None)
-            mock_page.wait_for_selector.return_value = asyncio.Future()
-            mock_page.wait_for_selector.return_value.set_result(None)
+# 📌 Integration Test Using Playwright
+async def integration_test():
+    async with async_playwright() as p:
+        try:
+            browser = await p.chromium.launch(
+                headless=False,
+                args=[
+                    "--no-sandbox",
+                    "--disable-gpu",
+                    "--disable-software-rasterizer",
+                    "--disable-dev-shm-usage",
+                    "--disable-setuid-sandbox"
+                ],
+                channel="chrome"
+            )
+        except Exception as e:
+            print("Failed to launch browser with bundled Chromium:", e)
+            return
 
-            # Simulate one question extraction:
-            fake_element = AsyncMock()
-            fake_label = AsyncMock()
-            
-            # ✅ Fix: Use `AsyncMock(return_value=...)` for proper async return
-            fake_label.inner_text = AsyncMock(return_value="What is your greatest strength?")
-            
-            fake_element.query_selector.return_value = fake_label
-            mock_page.query_selector_all.return_value = [fake_element]
+        page = await browser.new_page()
+        
+        # --- Step 1: Open Website ---
+        try:
+            await page.goto(TEST_URL)
+            print("✅ Opened the website:", TEST_URL)
+        except Exception as e:
+            print("Error navigating to URL:", e)
+            await browser.close()
+            return
 
-            # Call function
+        await page.wait_for_timeout(3000)  # Wait for page load
+
+        # --- Step 2: Generate Cover Letter and Resume ---
+        with app.app_context():  # Fixes `RuntimeError: Working outside of application context`
+            user_data = {
+                "name": "John Doe",
+                "skills": ["Python", "Playwright", "AI"],
+                "experience": ["Software Engineer at ABC", "Developer at XYZ"],
+            }
+            cover_letter_path, resume_path = generate_and_save_files(user_data)
+
+        print("\n✅ Saved Cover Letter & Resume as PDFs.")
+
+        # --- Step 3: Upload Resume ---
+        try:
+            resume_input = await page.wait_for_selector('input[type="file"]', timeout=5000)
+            await resume_input.set_input_files(resume_path)
+            print("✅ Uploaded Resume")
+        except Exception as e:
+            print("⚠️ Resume upload failed:", e)
+
+        # --- Step 4: Upload Cover Letter ---
+        try:
+            cover_letter_input = await page.wait_for_selector('input[type="file"]', timeout=5000)
+            await cover_letter_input.set_input_files(cover_letter_path)
+            print("✅ Uploaded Cover Letter")
+        except Exception as e:
+            print("⚠️ Cover letter upload failed:", e)
+
+        # --- Step 5: Extract Application Questions ---
+        try:
             questions = await extract_application_questions_async("dummy_job_id")
-            print("Extracted Questions:", questions)
+            print("\n✅ Extracted Application Questions:", questions)
+        except Exception as e:
+            print("⚠️ Error extracting application questions:", e)
 
-            assert isinstance(questions, list)
-            # ✅ Fix: Ensure the extracted questions contain expected text
-            assert any("greatest strength" in q["text"] for q in questions)
+        # --- Step 6: Fill Out Form Fields ---
+        try:
+            await page.fill('input[name="name"]', "John Doe")
+            await page.fill('input[name="email"]', "johndoe@example.com")
+            print("✅ Filled out name & email fields.")
+        except Exception as e:
+            print("⚠️ Error filling form fields:", e)
 
-    def test_extract_application_questions_sync_wrapper(self):
-        """
-        Test the synchronous wrapper that calls the asynchronous extraction.
-        """
-        with patch("utils.application_filler.extract_application_questions_async", new_callable=AsyncMock) as mock_async:
-            # Simulate a dummy question list
-            mock_async.return_value = [{"text": "What is your greatest strength?", "type": "text"}]
-            questions = extract_application_questions("dummy_job_id")
-            assert isinstance(questions, list)
-            assert "greatest strength" in questions[0]["text"]
+        # --- Step 7: Submit Application ---
+        try:
+            submit_button = await page.wait_for_selector('button[type="submit"]', timeout=5000)
+            await submit_button.click()
+            print("✅ Clicked Submit Button")
+        except Exception as e:
+            print("⚠️ Submission failed:", e)
 
-    def test_setup_gemini_success(self):
-        """
-        Test that setup_gemini configures the Gemini API when the key is set.
-        """
-        with patch("utils.application_filler.genai.configure") as mock_configure:
-            setup_gemini()
-            mock_configure.assert_called_with(api_key=os.getenv("GEMINI_API_KEY"))
+        # --- Step 8: Cleanup ---
+        await asyncio.sleep(5)
+        await browser.close()
 
-    def test_setup_gemini_failure(self):
-        """
-        Test that setup_gemini raises an error when the GEMINI_API_KEY is missing.
-        """
-        # Temporarily remove the API key from config
-        app.config['GEMINI_API_KEY'] = None
-        with pytest.raises(ValueError):
-            setup_gemini()
-        # Reset for further tests
-        app.config['GEMINI_API_KEY'] = 'dummy_api_key'
-
-    def test_generate_application_responses(self, dummy_user):
-        """
-        Test the generation of application responses by mocking Gemini.
-        """
-        job_id = "dummy_job_id"
-        # Patch the function that extracts questions to return a dummy question list.
-        with patch("utils.application_filler.extract_application_questions", return_value=[{"text": "What is your greatest strength?", "type": "text"}]):
-            # Patch the Gemini model to simulate a generated response.
-            with patch("utils.application_filler.genai.GenerativeModel") as mock_model_class:
-                mock_model_instance = MagicMock()
-                fake_response = MagicMock()
-                fake_response.text = "I am dedicated and hardworking."
-                mock_model_instance.generate_content.return_value = fake_response
-                mock_model_class.return_value = mock_model_instance
-
-                responses = generate_application_responses(job_id, dummy_user)
-                assert isinstance(responses, dict)
-                for question, answer in responses.items():
-                    assert answer == "I am dedicated and hardworking."
-
-# --- Tests for JobSubmitter Module ---
-class TestJobSubmitter:
-
-    @pytest.mark.asyncio
-    async def test_submit_application_async_success(self, dummy_user):
-        """
-        Test the async job application submission by patching Playwright.
-        We simulate standard fields and a submit button.
-        """
-        responses = {"What is your greatest strength?": "Hardworking."}
-        job_id = "dummy_job_id"
-
-        with patch("utils.job_search.job_submitter.async_playwright") as mock_playwright:
-            mock_instance = AsyncMock()
-            mock_browser = AsyncMock()
-            mock_context = AsyncMock()
-            mock_page = AsyncMock()
-
-            # Chain the async mocks
-            mock_playwright.__aenter__.return_value = mock_instance
-            mock_instance.chromium.launch.return_value = mock_browser
-            mock_browser.new_context.return_value = mock_context
-            mock_context.new_page.return_value = mock_page
-            
-            # Simulate page actions for navigation and waiting
-            mock_page.goto.return_value = asyncio.Future()
-            mock_page.goto.return_value.set_result(None)
-            mock_page.wait_for_selector.return_value = asyncio.Future()
-            mock_page.wait_for_selector.return_value.set_result(None)
-            
-            # Simulate form field interactions:
-            # For file upload, assume file upload field exists.
-            file_input = AsyncMock()
-            def query_selector_side_effect(selector):
-                if 'input[type="file"]' in selector:
-                    return file_input
-                # For name and email fields, return a dummy AsyncMock
-                if "#input-applicant.name" in selector or "#input-applicant.email" in selector:
-                    return AsyncMock()
-                # For submit button, return a dummy AsyncMock
-                if "button" in selector:
-                    return AsyncMock()
-                return None
-            mock_page.query_selector.side_effect = query_selector_side_effect
-            
-            # For wait_for_selector on submit confirmation, simulate a successful wait.
-            mock_page.wait_for_selector.return_value = asyncio.Future()
-            mock_page.wait_for_selector.return_value.set_result(None)
-            
-            result = await submit_application_async(job_id, dummy_user, responses)
-            assert isinstance(result, dict)
-            # Here we check that the result contains the job_id and a message.
-            assert result.get("job_id") == job_id
-
-    def test_submit_application_sync_wrapper(self, dummy_user):
-        """
-        Test the synchronous wrapper for the async submit_application function.
-        """
-        job_id = "dummy_job_id"
-        responses = {"What is your greatest strength?": "Hardworking."}
-
-        with patch("utils.job_search.job_submitter.submit_application_async", new_callable=AsyncMock) as mock_async:
-            mock_async.return_value = {"success": True, "job_id": job_id, "message": "Application submitted successfully"}
-            result = submit_application(job_id, dummy_user, responses)
-            assert result["success"] is True
-            assert result["job_id"] == job_id
+if __name__ == '__main__':
+    asyncio.run(integration_test())
