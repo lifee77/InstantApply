@@ -9,6 +9,59 @@ import sys
 from setup_gemini import check_gemini_api
 import json
 
+# Add these imports for dependency checking
+import pkg_resources
+import subprocess
+import importlib.util
+
+# Function to check NEAR AI dependencies
+def check_near_dependencies():
+    """
+    Check if the necessary dependencies for NEAR AI tools are installed correctly.
+    Provides guidance for fixing common issues.
+    """
+    try:
+        # Try importing critical modules
+        import boto3
+        import OpenSSL
+        
+        # Check PyOpenSSL version
+        pyopenssl_version = pkg_resources.get_distribution("pyopenssl").version
+        print(f"Found PyOpenSSL version: {pyopenssl_version}")
+        
+        # Try accessing the problematic attribute to check compatibility
+        from OpenSSL import crypto
+        if not hasattr(crypto._lib, 'X509_V_FLAG_NOTIFY_POLICY'):
+            print("\nWARNING: Incompatible OpenSSL version detected.")
+            print("This may cause issues when using NEAR AI commands.")
+            print("\nTo fix this, try the following steps:")
+            print("1. Create a new virtual environment:")
+            print("   python -m venv fresh_env")
+            print("2. Activate the environment:")
+            print("   source fresh_env/bin/activate")
+            print("3. Upgrade pip:")
+            print("   pip install --upgrade pip")
+            print("4. Install compatible versions:")
+            print("   pip install 'pyopenssl>=22.0.0' cryptography boto3 nearai")
+            print("\nAlternatively, you can try:")
+            print("   pip uninstall pyopenssl cryptography")
+            print("   pip install pyopenssl==22.0.0 cryptography==38.0.0")
+            print("\nIf the issue persists, check your system OpenSSL installation")
+            return False
+        
+        print("NEAR AI dependencies check: OK")
+        return True
+    
+    except (ImportError, pkg_resources.DistributionNotFound) as e:
+        print(f"\nDependency error: {str(e)}")
+        print("Some required packages for NEAR AI tools are missing.")
+        print("\nTo install required packages:")
+        print("   pip install boto3 pyopenssl cryptography nearai")
+        return False
+    except Exception as e:
+        print(f"\nUnexpected error checking dependencies: {str(e)}")
+        return False
+
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 CORS(app)
@@ -175,6 +228,9 @@ def applications():
 if __name__ == '__main__':
     # Check if Gemini API key exists in .env
     check_gemini_api()
+    
+    # Check NEAR AI dependencies
+    check_near_dependencies()
     
     # Run the app
     app.run(debug=app.config['DEBUG'])

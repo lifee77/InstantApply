@@ -1,6 +1,42 @@
 # InstantApply
 
-An AI-powered job application assistant that automatically fills out and submits job applications on behalf of users.
+Automated job application tool.
+
+## Dependencies
+
+- Python 3.9+
+- Rust toolchain (for some Python package dependencies)
+- Playwright
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+# Install Rust and update pip
+chmod +x setup_dependencies.sh
+./setup_dependencies.sh
+
+# Create and activate a virtual environment
+python -m venv myenv
+source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+
+# Install Python packages
+pip install -r requirements.txt
+```
+
+2. Set up environment variables:
+   
+```bash
+cp .env.example .env
+# Edit .env with your API keys and settings
+```
+
+3. Install Playwright browsers:
+
+```bash
+playwright install
+```
 
 ## Features
 
@@ -10,49 +46,6 @@ An AI-powered job application assistant that automatically fills out and submits
 - Automatically fill and submit applications
 - Track application status
 - Parse and extract text from resume documents (PDF, DOCX, TXT)
-
-## Setup
-
-### Prerequisites
-
-- Python 3.8+
-- Node.js (required for Playwright)
-- Google Gemini API key
-
-### Installation
-
-1. Clone the repository:
-```
-git clone <repository-url>
-cd InstantApply
-```
-
-2. Create and activate a virtual environment:
-```
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```
-pip install -r requirements.txt
-```
-
-4. Install Playwright browsers:
-```
-python -m playwright install chromium
-```
-
-5. Create a .env file with your Google Gemini API key:
-```
-echo "GEMINI_API_KEY=your_api_key_here" > .env
-echo "SECRET_KEY=your_secret_key_here" >> .env
-```
-
-6. Initialize the database:
-```
-python init_db.py
-```
 
 ### Getting a Gemini API Key
 
