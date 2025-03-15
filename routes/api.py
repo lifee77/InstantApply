@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_login import login_required, current_user
-from utils.indeed_scraper import search_jobs
+# Update import to use the new job_search module
+from utils.job_search import search_jobs
 from utils.application_filler import generate_application_responses
 from utils.job_submitter import submit_application
 from utils.document_parser import parse_and_save_resume, get_resume_file
@@ -20,6 +21,7 @@ def search():
     if not job_title or not location:
         return jsonify({'error': 'Job title and location are required'}), 400
     
+    # Use the new job search function
     jobs = search_jobs(job_title, location)
     return jsonify({'jobs': jobs})
 
