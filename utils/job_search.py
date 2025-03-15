@@ -166,15 +166,46 @@ def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
             data = response.json()
             api_jobs = []
             
+            # Save raw response for debugging
+            debug_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'debug')
+            os.makedirs(debug_dir, exist_ok=True)
+            with open(os.path.join(debug_dir, 'api_response.json'), 'w') as f:
+                json.dump(data, f, indent=2)
+            
             # Parse API response
             for job_data in data.get('data', []):
+                # Get location fields, ensuring they're strings
+                job_city = job_data.get('job_city') or ''
+                job_state = job_data.get('job_state') or ''
+                
+                # Create a properly formatted location string
+                location_str = ''
+                if job_city:
+                    location_str = job_city
+                if job_state:
+                    if location_str:
+                        location_str += f", {job_state}"
+                    else:
+                        location_str = job_state
+                
+                # If we still don't have location, use a default or the input location
+                if not location_str:
+                    location_str = location if location else "Unknown"
+                
+                # Format the job description for the snippet
+                job_description = job_data.get('job_description', '')
+                if job_description:
+                    desc_snippet = job_description[:150] + '...'
+                else:
+                    desc_snippet = "No description available"
+                
                 job = {
                     'id': job_data.get('job_id', f"jsearch-{len(api_jobs) + 1}"),
                     'title': job_data.get('job_title', ''),
                     'company': job_data.get('employer_name', ''),
-                    'location': job_data.get('job_city', '') + ', ' + job_data.get('job_state', ''),
+                    'location': location_str,
                     'job_type': job_data.get('job_employment_type', ''),
-                    'description_snippet': job_data.get('job_description', '')[:150] + '...',
+                    'description_snippet': desc_snippet,
                     'url': job_data.get('job_apply_link', ''),
                     'source': 'JSearch API',
                     'date_generated': job_data.get('job_posted_at_datetime_utc', '')
@@ -187,13 +218,18 @@ def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
             if api_jobs:
                 logger.info(f"Found {len(api_jobs)} jobs via API")
                 return api_jobs
+            else:
+                logger.warning("API returned data but no valid jobs were found")
                 
         # If we get here, the API didn't return useful results, fall back to mock data
-        logger.warning("API returned no usable results. Using mock data.")
+        logger.warning(f"API returned status code {response.status_code}")
         return search_jobs_mock(job_title, location)
         
     except Exception as e:
         logger.error(f"Error in API job search: {str(e)}")
+        # Log detailed exception for debugging
+        import traceback
+        logger.error(traceback.format_exc())
         return search_jobs_mock(job_title, location)
 
 def search_jobs(job_title: str, location: str) -> List[Dict[str, Any]]:
