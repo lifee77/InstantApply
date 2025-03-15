@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import os
 from typing import Dict, Any
 from playwright.async_api import async_playwright, Playwright
 from models.user import User
@@ -50,8 +51,15 @@ async def submit_application_async(job_id: str, user: User, responses: Dict[str,
                 if email_input:
                     await email_input.fill(user.email)
                 
-                # Resume upload (this would be more complex in a real implementation)
-                # We'd need to handle file uploads which might require additional logic
+                # Upload resume if available
+                if user.resume_file_path and os.path.exists(user.resume_file_path):
+                    # Look for resume upload field
+                    file_input = await page.query_selector('input[type="file"][accept=".pdf,.doc,.docx"]')
+                    if file_input:
+                        await file_input.set_input_files(user.resume_file_path)
+                        logger.info(f"Uploaded resume file: {user.resume_file_path}")
+                    else:
+                        logger.warning("Resume upload field not found")
             except Exception as e:
                 logger.warning(f"Standard fields not found: {str(e)}")
             

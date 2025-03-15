@@ -1,5 +1,9 @@
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # Flask settings
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_key_for_development')

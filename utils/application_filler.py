@@ -106,11 +106,12 @@ def setup_gemini():
     """Configure the Gemini API"""
     api_key = current_app.config.get('GEMINI_API_KEY')
     if not api_key:
-        raise ValueError("GEMINI_API_KEY is not set in configuration")
+        logger.error("GEMINI_API_KEY is not set in configuration")
+        raise ValueError("GEMINI_API_KEY is not set. Please add it to your .env file.")
     
     genai.configure(api_key=api_key)
 
-def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]]:
+def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
     """
     Generate responses to job application questions using Gemini AI
     

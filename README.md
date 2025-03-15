@@ -9,6 +9,7 @@ An AI-powered job application assistant that automatically fills out and submits
 - Generate intelligent responses to application questions using Google Gemini 2.0
 - Automatically fill and submit applications
 - Track application status
+- Parse and extract text from resume documents (PDF, DOCX, TXT)
 
 ## Setup
 
@@ -42,38 +43,22 @@ pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-5. Set up your Google Gemini API key:
+5. Create a .env file with your Google Gemini API key:
 ```
-python setup_gemini.py
-```
-
-6. Set environment variables:
-```
-export FLASK_APP=app.py
-export FLASK_DEBUG=1
-export SECRET_KEY=your_secret_key
+echo "GEMINI_API_KEY=your_api_key_here" > .env
+echo "SECRET_KEY=your_secret_key_here" >> .env
 ```
 
-On Windows:
+6. Initialize the database:
 ```
-set FLASK_APP=app.py
-set FLASK_DEBUG=1
-set SECRET_KEY=your_secret_key
-```
-
-7. Initialize the database:
-```
-flask shell
->>> from app import db
->>> db.create_all()
->>> exit()
+python init_db.py
 ```
 
 ### Getting a Gemini API Key
 
 1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Create a new API key
-3. Use the setup script to configure your key: `python setup_gemini.py`
+3. Add it to your .env file: `GEMINI_API_KEY=your_key_here`
 
 ### Running the Application
 
@@ -83,16 +68,34 @@ flask run
 
 Navigate to `http://localhost:5000` in your browser.
 
+## Troubleshooting
+
+If you encounter database errors like "no such table: users", make sure you've initialized the database:
+
+```
+python init_db.py
+```
+
+If problems persist, try removing the database file and creating it again:
+
+```
+rm instance/instant_apply.db  # On Windows: del instance\instant_apply.db
+python init_db.py
+```
+
 ## Project Structure
 
 - `app.py` - Main Flask application file
 - `config.py` - Configuration settings
+- `.env` - Environment variables (API keys, secrets)
+- `init_db.py` - Database initialization script
 - `utils/` - Utility modules
   - `indeed_scraper.py` - Indeed job search functionality
   - `application_filler.py` - AI-powered form filling using Gemini
   - `job_submitter.py` - Job submission handling
 - `models/` - Database models
   - `user.py` - User model definitions
+  - `application.py` - Application tracking model
 - `templates/` - HTML templates
 - `static/` - Static assets (CSS, JS)
 
@@ -107,6 +110,20 @@ Navigate to `http://localhost:5000` in your browser.
    - Generates appropriate responses using Gemini 2.0
    - Fills out the application form
    - Submits the application
+
+## Additional Features
+
+### Resume Parsing
+
+InstantApply can extract text from the following file formats:
+- PDF documents
+- Microsoft Word documents (DOCX)
+- Plain text files (TXT)
+
+The extracted text is used to:
+1. Help the AI better understand your qualifications
+2. Automatically fill out job applications
+3. Store a searchable version of your resume
 
 ## License
 

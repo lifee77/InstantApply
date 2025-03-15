@@ -5,6 +5,166 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile - InstantApply</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .profile-view {
+            margin-bottom: 30px;
+        }
+        .profile-view h3 {
+            color: #0066cc;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .profile-view p {
+            margin: 5px 0;
+        }
+        .profile-view .resume-text {
+            white-space: pre-wrap;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .edit-form {
+            display: none;
+        }
+        .profile-actions {
+            margin: 25px 0;
+        }
+        .btn-edit {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-edit:hover {
+            background-color: #0052a3;
+        }
+        .btn-cancel {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .btn-cancel:hover {
+            background-color: #5a6268;
+        }
+        .empty-field {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .resume-toolbar {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .resume-toolbar button {
+            background-color: transparent;
+            border: 1px solid #0066cc;
+            color: #0066cc;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .resume-toolbar button:hover {
+            background-color: #f0f7ff;
+        }
+        .btn-copy {
+            margin-right: 10px;
+        }
+        .upload-progress {
+            height: 5px;
+            margin-top: 10px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #0066cc;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .upload-status {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #6c757d;
+            display: none;
+        }
+        .resume-file-info {
+            background-color: #e9f7fd;
+            padding: 10px 15px;
+            border: 1px solid #c2e7f5;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .resume-file-info p {
+            margin: 0;
+            color: #0c5460;
+        }
+        
+        .btn-download-original {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-download-original:hover {
+            background-color: #138496;
+        }
+        
+        .resume-toolbar button, .btn-download-original {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .icon-download {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="white"><path d="M8 12l-4-4h2.5V4h3v4H12L8 12zm-.5 4c-3.59 0-6.5-2.91-6.5-6.5S3.91 3 7.5 3 14 5.91 14 9.5 11.09 16 7.5 16z"/></svg>');
+        }
+        
+        .icon-copy {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M4 4v10h10V4H4zm9 9H5V5h8v8zm-3-9H2v10h1V5h7V4z"/></svg>');
+        }
+        
+        .icon-text {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M13.5 1h-11C1.67 1 1 1.67 1 2.5v11c0 .83.67 1.5 1.5 1.5h11c.83 0 1.5-.67 1.5-1.5v-11c0-.83-.67-1.5-1.5-1.5zM5 13L2 7h2l2 4 2-4h2L7 13H5zm8-2h-4v-1h4v1zm0-2h-4v-1h4v1zm0-2h-4V6h4v1z"/></svg>');
+        }
+        
+        .icon-file {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230c5460"><path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1zm3 13H4V2h4v4h4v8z"/></svg>');
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -13,48 +173,112 @@
         <nav>
             <a href="/">Home</a> | 
             <a href="/profile">Profile</a> |
-            <a href="/applications">My Applications</a>
+            <a href="/applications">My Applications</a> |
+            <a href="/logout">Logout</a>
         </nav>
     </header>
     
     <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
         <section class="profile-section">
             <h2>Your Profile</h2>
-            <p>Complete your profile to enable automatic job applications</p>
             
-            <form id="user-profile-form">
-                <div class="form-group">
-                    <label for="user-name">Full Name</label>
-                    <input type="text" id="user-name" name="user-name" required>
-                </div>
+            <!-- View Profile Section -->
+            <div id="profile-view" class="profile-view">
+                <h3>Personal Information</h3>
+                <p><strong>Name:</strong> {{ current_user.name }}</p>
+                <p><strong>Email:</strong> {{ current_user.email }}</p>
                 
-                <div class="form-group">
-                    <label for="user-email">Email</label>
-                    <input type="email" id="user-email" name="user-email" required>
+                <h3>Resume</h3>
+                {% if current_user.resume_file_path %}
+                <div class="resume-file-info">
+                    <p><span class="icon icon-file"></span> Original resume file: {{ current_user.resume_filename }}</p>
+                    <a href="/api/user/resume" class="btn-download-original"><span class="icon icon-download"></span> Download Original</a>
                 </div>
+                {% endif %}
                 
-                <div class="form-group">
-                    <label for="user-resume">Resume</label>
-                    <textarea id="user-resume" name="user-resume" rows="5" placeholder="Paste your resume text here or upload a file"></textarea>
+                {% if current_user.resume %}
+                    <div class="resume-toolbar">
+                        <button class="btn-copy" onclick="copyResumeText()"><span class="icon icon-copy"></span> Copy Text</button>
+                        <button class="btn-download" onclick="downloadResumeText()"><span class="icon icon-text"></span> Download Text</button>
+                    </div>
+                    <div class="resume-text" id="resume-content">{{ current_user.resume }}</div>
+                {% else %}
+                    <p class="empty-field">No resume uploaded yet. Click 'Edit Profile' to add your resume.</p>
+                {% endif %}
+                
+                <h3>Skills</h3>
+                {% if current_user.skills %}
+                    <p>{{ current_user.skills }}</p>
+                {% else %}
+                    <p class="empty-field">No skills added yet. Click 'Edit Profile' to add your skills.</p>
+                {% endif %}
+                
+                <h3>Experience</h3>
+                {% if current_user.experience %}
+                    <div class="resume-text">{{ current_user.experience }}</div>
+                {% else %}
+                    <p class="empty-field">No experience added yet. Click 'Edit Profile' to add your experience.</p>
+                {% endif %}
+                
+                <div class="profile-actions">
+                    <button id="btn-edit-profile" class="btn-edit">Edit Profile</button>
                 </div>
-                
-                <div class="form-group">
-                    <label for="user-resume-file">Upload Resume</label>
-                    <input type="file" id="user-resume-file" name="user-resume-file" accept=".pdf,.doc,.docx">
-                </div>
-                
-                <div class="form-group">
-                    <label for="user-skills">Skills</label>
-                    <textarea id="user-skills" name="user-skills" rows="3" placeholder="List your skills, separated by commas"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="user-experience">Experience</label>
-                    <textarea id="user-experience" name="user-experience" rows="5" placeholder="Describe your work experience"></textarea>
-                </div>
-                
-                <button type="submit">Save Profile</button>
-            </form>
+            </div>
+            
+            <!-- Edit Profile Form -->
+            <div id="profile-edit" class="edit-form">
+                <form id="user-profile-form">
+                    <div class="form-group">
+                        <label for="user-name">Full Name</label>
+                        <input type="text" id="user-name" name="user-name" value="{{ current_user.name }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-email">Email</label>
+                        <input type="email" id="user-email" name="user-email" value="{{ current_user.email }}" required readonly>
+                        <small class="form-text">Email cannot be changed.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-resume">Resume</label>
+                        <textarea id="user-resume" name="user-resume" rows="8" placeholder="Paste your resume text here or upload a file">{{ current_user.resume or '' }}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-resume-file">Upload Resume</label>
+                        <input type="file" id="user-resume-file" name="user-resume-file" accept=".pdf,.doc,.docx,.txt">
+                        <small class="form-text">Supported formats: PDF, DOCX, DOC, TXT. The original file will be stored along with extracted text.</small>
+                        
+                        <div class="upload-progress">
+                            <div class="progress-bar" id="upload-progress-bar"></div>
+                        </div>
+                        <div id="upload-status" class="upload-status"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-skills">Skills</label>
+                        <textarea id="user-skills" name="user-skills" rows="3" placeholder="List your skills, separated by commas">{{ current_user.skills or '' }}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-experience">Experience</label>
+                        <textarea id="user-experience" name="user-experience" rows="5" placeholder="Describe your work experience">{{ current_user.experience or '' }}</textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-edit">Save Profile</button>
+                    <button type="button" id="btn-cancel-edit" class="btn-cancel">Cancel</button>
+                </form>
+            </div>
         </section>
     </main>
     
@@ -62,6 +286,155 @@
         <p>&copy; 2023 InstantApply</p>
     </footer>
     
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const profileView = document.getElementById('profile-view');
+            const profileEdit = document.getElementById('profile-edit');
+            const btnEditProfile = document.getElementById('btn-edit-profile');
+            const btnCancelEdit = document.getElementById('btn-cancel-edit');
+            const userProfileForm = document.getElementById('user-profile-form');
+            
+            // Show edit form
+            btnEditProfile.addEventListener('click', function() {
+                profileView.style.display = 'none';
+                profileEdit.style.display = 'block';
+            });
+            
+            // Cancel editing
+            btnCancelEdit.addEventListener('click', function() {
+                profileEdit.style.display = 'none';
+                profileView.style.display = 'block';
+            });
+            
+            // Handle form submission
+            userProfileForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    name: document.getElementById('user-name').value,
+                    email: document.getElementById('user-email').value,
+                    resume: document.getElementById('user-resume').value,
+                    skills: document.getElementById('user-skills').value,
+                    experience: document.getElementById('user-experience').value
+                };
+                
+                // Check if we have a base64 resume to include
+                const resumeFileInput = document.getElementById('user-resume-file');
+                if (resumeFileInput.getAttribute('data-base64')) {
+                    formData.resume = resumeFileInput.getAttribute('data-base64');
+                }
+                
+                // Save profile data via API
+                fetch('/api/user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Profile saved successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to save profile'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while saving your profile. Please try again.');
+                });
+            });
+            
+            // Handle file upload with preview
+            const resumeFileInput = document.getElementById('user-resume-file');
+            const resumeTextarea = document.getElementById('user-resume');
+            const uploadProgress = document.querySelector('.upload-progress');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const uploadStatus = document.getElementById('upload-status');
+            
+            resumeFileInput.addEventListener('change', function() {
+                const file = resumeFileInput.files[0];
+                if (!file) return;
+                
+                const maxSizeMB = 10;
+                const maxSizeBytes = maxSizeMB * 1024 * 1024;
+                
+                if (file.size > maxSizeBytes) {
+                    alert(`File is too large. Maximum size is ${maxSizeMB}MB.`);
+                    resumeFileInput.value = '';
+                    return;
+                }
+                
+                // Show progress bar
+                uploadProgress.style.display = 'block';
+                uploadStatus.style.display = 'block';
+                uploadStatus.textContent = 'Reading file...';
+                
+                const reader = new FileReader();
+                
+                reader.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percentLoaded = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentLoaded + '%';
+                        uploadStatus.textContent = `Reading file... ${percentLoaded}%`;
+                    }
+                };
+                
+                reader.onload = function(e) {
+                    // For text files, show content directly
+                    if (file.type === 'text/plain') {
+                        resumeTextarea.value = e.target.result;
+                        uploadStatus.textContent = 'Text file loaded successfully.';
+                    } else {
+                        // For other files, store as base64 data URI
+                        const base64String = e.target.result;
+                        resumeFileInput.setAttribute('data-base64', base64String);
+                        uploadStatus.textContent = `${file.name} loaded successfully. File will be parsed on save.`;
+                        resumeTextarea.value = `[Resume will be extracted from: ${file.name}]`;
+                    }
+                };
+                
+                reader.onerror = function() {
+                    uploadStatus.textContent = 'Error reading file.';
+                };
+                
+                if (file.type === 'text/plain') {
+                    reader.readAsText(file);
+                } else {
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+        
+        function copyResumeText() {
+            const resumeText = document.getElementById('resume-content').innerText;
+            navigator.clipboard.writeText(resumeText)
+                .then(() => {
+                    alert('Resume copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy resume: ', err);
+                    alert('Failed to copy resume text.');
+                });
+        }
+        
+        function downloadResumeText() {
+            const resumeText = document.getElementById('resume-content').innerText;
+            const blob = new Blob([resumeText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'resume.txt';
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
 </body>
 </html>

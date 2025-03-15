@@ -13,7 +13,8 @@
         <nav>
             <a href="/">Home</a> | 
             <a href="/profile">Profile</a> |
-            <a href="/applications">My Applications</a>
+            <a href="/applications">My Applications</a> |
+            <a href="/logout">Logout</a>
         </nav>
     </header>
     
@@ -34,19 +35,24 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const userId = localStorage.getItem('userId');
+            const userId = {{ current_user.id }};
             const applicationsContainer = document.getElementById('applications-container');
             
-            if (!userId) {
-                applicationsContainer.innerHTML = '<p>Please complete your profile before viewing applications.</p>';
-                return;
-            }
-            
             fetch(`/api/applications/${userId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(applications => {
                     if (applications.length === 0) {
-                        applicationsContainer.innerHTML = '<p>You haven\'t submitted any applications yet.</p>';
+                        applicationsContainer.innerHTML = `
+                            <div class="empty-state">
+                                <p>You haven't submitted any applications yet.</p>
+                                <p>Start by <a href="/">searching for jobs</a> that match your skills and interests.</p>
+                            </div>
+                        `;
                         return;
                     }
                     
@@ -56,11 +62,12 @@
                     
                     applications.forEach(app => {
                         const submittedDate = new Date(app.submitted_at).toLocaleDateString();
+                        const statusClass = getStatusClass(app.status);
                         html += `
                             <tr>
                                 <td>${app.company}</td>
                                 <td>${app.position}</td>
-                                <td>${app.status}</td>
+                                <td><span class="status-badge ${statusClass}">${app.status}</span></td>
                                 <td>${submittedDate}</td>
                             </tr>
                         `;
@@ -73,7 +80,52 @@
                     console.error('Error:', error);
                     applicationsContainer.innerHTML = '<p>An error occurred while fetching your applications. Please try again later.</p>';
                 });
+                
+            function getStatusClass(status) {
+                switch (status.toLowerCase()) {
+                    case 'submitted': return 'status-submitted';
+                    case 'interview': return 'status-interview';
+                    case 'rejected': return 'status-rejected';
+                    case 'accepted': return 'status-accepted';
+                    default: return '';
+                }
+            }
         });
     </script>
+    <style>
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .empty-state p {
+            margin-bottom: 15px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .status-submitted {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .status-interview {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-accepted {
+            background-color: #d4edda;
+            color: #155724;
+        }
+    </style>
 </body>
 </html>
