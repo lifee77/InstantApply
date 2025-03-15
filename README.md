@@ -1,6 +1,9 @@
 # InstantApply
 
 Automated job application tool.
+Demo Video: https://drive.google.com/drive/folders/1MXEEPN3f61T9VI8zWsxLmzQC34YKX91r?usp=sharing
+Hosted: https://app.near.ai/agents/quickzebra7715.near/InstantApply/latest
+
 
 ## Dependencies
 
