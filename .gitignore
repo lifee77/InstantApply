@@ -13,6 +13,7 @@ __pycache__/
 instance/
 debug/
 
+cacert.pem
 # Distribution / packaging
 .Python
 build/
