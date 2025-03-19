@@ -47,6 +47,18 @@ class User(db.Model, UserMixin):
     # Values
     applicant_values = db.Column(db.Text)  # JSON string of applicant values
     
+    # Demographic Information
+    race_ethnicity = db.Column(db.String(100))
+    gender = db.Column(db.String(50))
+    graduation_date = db.Column(db.Date)
+    military_status = db.Column(db.String(100))
+    military_branch = db.Column(db.String(100))
+    military_discharge_date = db.Column(db.Date)
+    disability_status = db.Column(db.String(100))
+    needs_sponsorship = db.Column(db.Boolean, default=False)
+    visa_status = db.Column(db.String(100))
+    veteran_status = db.Column(db.String(100))
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -86,6 +98,16 @@ class User(db.Model, UserMixin):
             'work_style': self.work_style,
             'industry_attraction': self.industry_attraction,
             'applicant_values': self.applicant_values,
+            'race_ethnicity': self.race_ethnicity,
+            'gender': self.gender,
+            'graduation_date': self.graduation_date.isoformat() if self.graduation_date else None,
+            'military_status': self.military_status,
+            'military_branch': self.military_branch,
+            'military_discharge_date': self.military_discharge_date.isoformat() if self.military_discharge_date else None,
+            'disability_status': self.disability_status,
+            'needs_sponsorship': self.needs_sponsorship,
+            'visa_status': self.visa_status,
+            'veteran_status': self.veteran_status,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }

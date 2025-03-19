@@ -438,3 +438,633 @@
     </script>
 </body>
 </html>
+{% extends "base.html" %}
+
+{% block title %}Complete Your Profile - InstantApply{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Complete Your Profile</h1>
+    <p class="lead">Provide additional details to enhance your job applications</p>
+
+    <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data">
+        {{ form.csrf_token }}
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4>Personal Information</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="professional_summary" class="form-label">Professional Summary</label>
+                    <textarea class="form-control" id="professional_summary" name="professional_summary" rows="4">{{ current_user.professional_summary }}</textarea>
+                    <div class="form-text">Brief overview of your professional background, skills, and career objectives.</div>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="willing_to_relocate" name="willing_to_relocate" {% if current_user.willing_to_relocate %}checked{% endif %}>
+                    <label class="form-check-label" for="willing_to_relocate">Willing to Relocate</label>
+                </div>
+
+                <div class="mb-3">
+                    <label for="authorization_status" class="form-label">Work Authorization Status</label>
+                    <select class="form-select" id="authorization_status" name="authorization_status">
+                        <option value="" {% if not current_user.authorization_status %}selected{% endif %}>Select status...</option>
+                        <option value="US Citizen" {% if current_user.authorization_status == "US Citizen" %}selected{% endif %}>US Citizen</option>
+                        <option value="Green Card Holder" {% if current_user.authorization_status == "Green Card Holder" %}selected{% endif %}>Green Card Holder</option>
+                        <option value="H1B Visa" {% if current_user.authorization_status == "H1B Visa" %}selected{% endif %}>H1B Visa</option>
+                        <option value="F1 OPT" {% if current_user.authorization_status == "F1 OPT" %}selected{% endif %}>F1 OPT</option>
+                        <option value="Other" {% if current_user.authorization_status and current_user.authorization_status not in ["US Citizen", "Green Card Holder", "H1B Visa", "F1 OPT"] %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="desired_job_titles" class="form-label">Desired Job Titles</label>
+                    <div id="job-titles-container">
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control job-title" placeholder="e.g., Software Engineer">
+                            <button type="button" class="btn btn-outline-secondary remove-job-title">Remove</button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-job-title" class="btn btn-secondary btn-sm mt-2">+ Add Another Title</button>
+                    <input type="hidden" name="desired_job_titles" id="desired_job_titles_json">
+                </div>
+
+                <div class="mb-3">
+                    <label for="linkedin_url" class="form-label">LinkedIn URL</label>
+                    <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{ current_user.linkedin_url }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="portfolio_links" class="form-label">Portfolio Links</label>
+                    <div id="portfolio-links-container">
+                        <div class="input-group mb-2">
+                            <input type="url" class="form-control portfolio-link" placeholder="https://github.com/yourusername">
+                            <button type="button" class="btn btn-outline-secondary remove-portfolio-link">Remove</button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-portfolio-link" class="btn btn-secondary btn-sm mt-2">+ Add Another Link</button>
+                    <input type="hidden" name="portfolio_links" id="portfolio_links_json">
+                </div>
+            </div>
+        </div>
+
+        <!-- Demographic Information Section (New) -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4>Demographic Information</h4>
+                <small class="text-white-50">This information is optional and will only be used when specifically required by employers</small>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="race_ethnicity" class="form-label">Race/Ethnicity</label>
+                    <select class="form-select" id="race_ethnicity" name="race_ethnicity">
+                        <option value="" {% if not current_user.race_ethnicity %}selected{% endif %}>Prefer not to say</option>
+                        <option value="American Indian or Alaska Native" {% if current_user.race_ethnicity == "American Indian or Alaska Native" %}selected{% endif %}>American Indian or Alaska Native</option>
+                        <option value="Asian" {% if current_user.race_ethnicity == "Asian" %}selected{% endif %}>Asian</option>
+                        <option value="Black or African American" {% if current_user.race_ethnicity == "Black or African American" %}selected{% endif %}>Black or African American</option>
+                        <option value="Hispanic or Latino" {% if current_user.race_ethnicity == "Hispanic or Latino" %}selected{% endif %}>Hispanic or Latino</option>
+                        <option value="Native Hawaiian or Other Pacific Islander" {% if current_user.race_ethnicity == "Native Hawaiian or Other Pacific Islander" %}selected{% endif %}>Native Hawaiian or Other Pacific Islander</option>
+                        <option value="White" {% if current_user.race_ethnicity == "White" %}selected{% endif %}>White</option>
+                        <option value="Two or More Races" {% if current_user.race_ethnicity == "Two or More Races" %}selected{% endif %}>Two or More Races</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="gender" class="form-label">Gender</label>
+                    <select class="form-select" id="gender" name="gender">
+                        <option value="" {% if not current_user.gender %}selected{% endif %}>Prefer not to say</option>
+                        <option value="Male" {% if current_user.gender == "Male" %}selected{% endif %}>Male</option>
+                        <option value="Female" {% if current_user.gender == "Female" %}selected{% endif %}>Female</option>
+                        <option value="Non-binary" {% if current_user.gender == "Non-binary" %}selected{% endif %}>Non-binary</option>
+                        <option value="Other" {% if current_user.gender == "Other" %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="graduation_date" class="form-label">Graduation Date</label>
+                    <input type="date" class="form-control" id="graduation_date" name="graduation_date" value="{{ current_user.graduation_date }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="disability_status" class="form-label">Disability Status</label>
+                    <select class="form-select" id="disability_status" name="disability_status">
+                        <option value="" {% if not current_user.disability_status %}selected{% endif %}>Prefer not to say</option>
+                        <option value="No disability" {% if current_user.disability_status == "No disability" %}selected{% endif %}>No disability</option>
+                        <option value="Person with a disability" {% if current_user.disability_status == "Person with a disability" %}selected{% endif %}>Person with a disability</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="military_status" class="form-label">Military Status</label>
+                    <select class="form-select" id="military_status" name="military_status" onchange="toggleMilitaryFields()">
+                        <option value="" {% if not current_user.military_status %}selected{% endif %}>Select status...</option>
+                        <option value="No Military Service" {% if current_user.military_status == "No Military Service" %}selected{% endif %}>No Military Service</option>
+                        <option value="Active Duty" {% if current_user.military_status == "Active Duty" %}selected{% endif %}>Active Duty</option>
+                        <option value="Veteran" {% if current_user.military_status == "Veteran" %}selected{% endif %}>Veteran</option>
+                        <option value="Reserves" {% if current_user.military_status == "Reserves" %}selected{% endif %}>Reserves</option>
+                    </select>
+                </div>
+
+                <div id="military-additional-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label for="military_branch" class="form-label">Military Branch</label>
+                        <select class="form-select" id="military_branch" name="military_branch">
+                            <option value="" {% if not current_user.military_branch %}selected{% endif %}>Select branch...</option>
+                            <option value="Army" {% if current_user.military_branch == "Army" %}selected{% endif %}>Army</option>
+                            <option value="Navy" {% if current_user.military_branch == "Navy" %}selected{% endif %}>Navy</option>
+                            <option value="Air Force" {% if current_user.military_branch == "Air Force" %}selected{% endif %}>Air Force</option>
+                            <option value="Marine Corps" {% if current_user.military_branch == "Marine Corps" %}selected{% endif %}>Marine Corps</option>
+                            <option value="Coast Guard" {% if current_user.military_branch == "Coast Guard" %}selected{% endif %}>Coast Guard</option>
+                            <option value="Space Force" {% if current_user.military_branch == "Space Force" %}selected{% endif %}>Space Force</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="military_discharge_date" class="form-label">Discharge Date</label>
+                        <input type="date" class="form-control" id="military_discharge_date" name="military_discharge_date" value="{{ current_user.military_discharge_date }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="veteran_status" class="form-label">Veteran Status</label>
+                        <select class="form-select" id="veteran_status" name="veteran_status">
+                            <option value="" {% if not current_user.veteran_status %}selected{% endif %}>Select status...</option>
+                            <option value="Protected veteran" {% if current_user.veteran_status == "Protected veteran" %}selected{% endif %}>Protected veteran</option>
+                            <option value="Recently separated veteran" {% if current_user.veteran_status == "Recently separated veteran" %}selected{% endif %}>Recently separated veteran</option>
+                            <option value="Disabled veteran" {% if current_user.veteran_status == "Disabled veteran" %}selected{% endif %}>Disabled veteran</option>
+                            <option value="Not a protected veteran" {% if current_user.veteran_status == "Not a protected veteran" %}selected{% endif %}>Not a protected veteran</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Immigration Status</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="needs_sponsorship" name="needs_sponsorship" {% if current_user.needs_sponsorship %}checked{% endif %}>
+                        <label class="form-check-label" for="needs_sponsorship">I will require sponsorship now or in the future</label>
+                    </div>
+
+                    <div class="mt-3">
+                        <label for="visa_status" class="form-label">Current Visa Status (if applicable)</label>
+                        <select class="form-select" id="visa_status" name="visa_status">
+                            <option value="" {% if not current_user.visa_status %}selected{% endif %}>Not applicable</option>
+                            <option value="F-1 Student" {% if current_user.visa_status == "F-1 Student" %}selected{% endif %}>F-1 Student</option>
+                            <option value="F-1 OPT" {% if current_user.visa_status == "F-1 OPT" %}selected{% endif %}>F-1 OPT</option>
+                            <option value="F-1 STEM OPT" {% if current_user.visa_status == "F-1 STEM OPT" %}selected{% endif %}>F-1 STEM OPT</option>
+                            <option value="H-1B" {% if current_user.visa_status == "H-1B" %}selected{% endif %}>H-1B</option>
+                            <option value="H-4 EAD" {% if current_user.visa_status == "H-4 EAD" %}selected{% endif %}>H-4 EAD</option>
+                            <option value="L-1" {% if current_user.visa_status == "L-1" %}selected{% endif %}>L-1</option>
+                            <option value="J-1" {% if current_user.visa_status == "J-1" %}selected{% endif %}>J-1</option>
+                            <option value="TN" {% if current_user.visa_status == "TN" %}selected{% endif %}>TN</option>
+                            <option value="Other" {% if current_user.visa_status and current_user.visa_status not in ["F-1 Student", "F-1 OPT", "F-1 STEM OPT", "H-1B", "H-4 EAD", "L-1", "J-1", "TN"] %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4>Work Preferences</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="desired_salary_range" class="form-label">Desired Salary Range</label>
+                    <input type="text" class="form-control" id="desired_salary_range" name="desired_salary_range" placeholder="e.g., $80,000 - $100,000" value="{{ current_user.desired_salary_range }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Work Mode Preference</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="work_mode_preference" id="remote" value="Remote" {% if current_user.work_mode_preference == "Remote" %}checked{% endif %}>
+                        <label class="form-check-label" for="remote">Remote</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="work_mode_preference" id="hybrid" value="Hybrid" {% if current_user.work_mode_preference == "Hybrid" %}checked{% endif %}>
+                        <label class="form-check-label" for="hybrid">Hybrid</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="work_mode_preference" id="in-office" value="In-Office" {% if current_user.work_mode_preference == "In-Office" %}checked{% endif %}>
+                        <label class="form-check-label" for="in-office">In-Office</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="available_start_date" class="form-label">Available Start Date</label>
+                    <input type="date" class="form-control" id="available_start_date" name="available_start_date" value="{{ current_user.available_start_date }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="preferred_company_type" class="form-label">Preferred Company Type</label>
+                    <select class="form-select" id="preferred_company_type" name="preferred_company_type">
+                        <option value="" {% if not current_user.preferred_company_type %}selected{% endif %}>Select preference...</option>
+                        <option value="Startup" {% if current_user.preferred_company_type == "Startup" %}selected{% endif %}>Startup</option>
+                        <option value="Small Business" {% if current_user.preferred_company_type == "Small Business" %}selected{% endif %}>Small Business</option>
+                        <option value="Mid-size Company" {% if current_user.preferred_company_type == "Mid-size Company" %}selected{% endif %}>Mid-size Company</option>
+                        <option value="Large Enterprise" {% if current_user.preferred_company_type == "Large Enterprise" %}selected{% endif %}>Large Enterprise</option>
+                        <option value="No Preference" {% if current_user.preferred_company_type == "No Preference" %}selected{% endif %}>No Preference</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4>Additional Qualifications</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Certifications</label>
+                    <div id="certifications-container">
+                        <div class="certification-entry border rounded p-3 mb-3">
+                            <div class="mb-2">
+                                <label class="form-label">Certification Name</label>
+                                <input type="text" class="form-control cert-name" placeholder="e.g., AWS Solutions Architect">
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <label class="form-label">Issuing Organization</label>
+                                    <input type="text" class="form-control cert-org" placeholder="e.g., Amazon Web Services">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label">Expiration Date</label>
+                                    <input type="date" class="form-control cert-expiry">
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-cert">Remove</button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-certification" class="btn btn-secondary btn-sm">+ Add Certification</button>
+                    <input type="hidden" name="certifications" id="certifications_json">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Languages</label>
+                    <div id="languages-container">
+                        <div class="language-entry row mb-2">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control language-name" placeholder="Language">
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select language-proficiency">
+                                    <option value="Native">Native</option>
+                                    <option value="Fluent">Fluent</option>
+                                    <option value="Advanced">Advanced</option>
+                                    <option value="Intermediate">Intermediate</option>
+                                    <option value="Basic">Basic</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-danger remove-language">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" id="add-language" class="btn btn-secondary btn-sm mt-2">+ Add Language</button>
+                    <input type="hidden" name="languages" id="languages_json">
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4>Application-Specific Questions</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="career_goals" class="form-label">Career Goals</label>
+                    <textarea class="form-control" id="career_goals" name="career_goals" rows="3">{{ current_user.career_goals }}</textarea>
+                    <div class="form-text">Share your short and long-term career goals.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="biggest_achievement" class="form-label">Biggest Professional Achievement</label>
+                    <textarea class="form-control" id="biggest_achievement" name="biggest_achievement" rows="3">{{ current_user.biggest_achievement }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="work_style" class="form-label">Work Style and Team Preferences</label>
+                    <textarea class="form-control" id="work_style" name="work_style" rows="3">{{ current_user.work_style }}</textarea>
+                    <div class="form-text">Describe your preferred work environment and collaboration style.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="industry_attraction" class="form-label">What Attracted You to This Industry/Field</label>
+                    <textarea class="form-control" id="industry_attraction" name="industry_attraction" rows="3">{{ current_user.industry_attraction }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4>Values</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="applicant_values" class="form-label">Your Professional Values</label>
+                    <div id="values-container">
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control value-item" placeholder="e.g., Innovation">
+                            <button type="button" class="btn btn-outline-secondary remove-value">Remove</button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-value" class="btn btn-secondary btn-sm mt-2">+ Add Another Value</button>
+                    <input type="hidden" name="applicant_values" id="applicant_values_json">
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 col-md-6 mx-auto mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">Save Profile</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize form with existing data
+    document.addEventListener('DOMContentLoaded', function() {
+        // Job Titles
+        try {
+            const jobTitles = {{ current_user.desired_job_titles|tojson|safe if current_user.desired_job_titles else '[]' }};
+            if (jobTitles.length) {
+                const container = document.getElementById('job-titles-container');
+                container.innerHTML = '';
+                jobTitles.forEach(title => {
+                    addJobTitleField(title);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading job titles:", e);
+        }
+
+        // Portfolio Links
+        try {
+            const portfolioLinks = {{ current_user.portfolio_links|tojson|safe if current_user.portfolio_links else '[]' }};
+            if (portfolioLinks.length) {
+                const container = document.getElementById('portfolio-links-container');
+                container.innerHTML = '';
+                portfolioLinks.forEach(link => {
+                    addPortfolioLinkField(link);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading portfolio links:", e);
+        }
+
+        // Certifications
+        try {
+            const certifications = {{ current_user.certifications|tojson|safe if current_user.certifications else '[]' }};
+            if (certifications.length) {
+                const container = document.getElementById('certifications-container');
+                container.innerHTML = '';
+                certifications.forEach(cert => {
+                    addCertificationField(cert);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading certifications:", e);
+        }
+
+        // Languages
+        try {
+            const languages = {{ current_user.languages|tojson|safe if current_user.languages else '[]' }};
+            if (languages.length) {
+                const container = document.getElementById('languages-container');
+                container.innerHTML = '';
+                languages.forEach(lang => {
+                    addLanguageField(lang);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading languages:", e);
+        }
+
+        // Values
+        try {
+            const values = {{ current_user.applicant_values|tojson|safe if current_user.applicant_values else '[]' }};
+            if (values.length) {
+                const container = document.getElementById('values-container');
+                container.innerHTML = '';
+                values.forEach(value => {
+                    addValueField(value);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading values:", e);
+        }
+        
+        // Check military status on page load to show/hide additional fields
+        toggleMilitaryFields();
+    });
+
+    // Toggle military fields based on selection
+    function toggleMilitaryFields() {
+        const militaryStatus = document.getElementById('military_status').value;
+        const additionalFields = document.getElementById('military-additional-fields');
+        
+        if (militaryStatus && militaryStatus !== 'No Military Service') {
+            additionalFields.style.display = 'block';
+        } else {
+            additionalFields.style.display = 'none';
+        }
+    }
+
+    // Job titles functionality
+    document.getElementById('add-job-title').addEventListener('click', function() {
+        addJobTitleField();
+    });
+
+    function addJobTitleField(value = '') {
+        const container = document.getElementById('job-titles-container');
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2';
+        div.innerHTML = `
+            <input type="text" class="form-control job-title" value="${value}" placeholder="e.g., Software Engineer">
+            <button type="button" class="btn btn-outline-secondary remove-job-title">Remove</button>
+        `;
+        container.appendChild(div);
+        
+        div.querySelector('.remove-job-title').addEventListener('click', function() {
+            container.removeChild(div);
+        });
+    }
+
+    // Portfolio links functionality
+    document.getElementById('add-portfolio-link').addEventListener('click', function() {
+        addPortfolioLinkField();
+    });
+
+    function addPortfolioLinkField(value = '') {
+        const container = document.getElementById('portfolio-links-container');
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2';
+        div.innerHTML = `
+            <input type="url" class="form-control portfolio-link" value="${value}" placeholder="https://github.com/yourusername">
+            <button type="button" class="btn btn-outline-secondary remove-portfolio-link">Remove</button>
+        `;
+        container.appendChild(div);
+        
+        div.querySelector('.remove-portfolio-link').addEventListener('click', function() {
+            container.removeChild(div);
+        });
+    }
+
+    // Certifications functionality
+    document.getElementById('add-certification').addEventListener('click', function() {
+        addCertificationField();
+    });
+
+    function addCertificationField(cert = {}) {
+        const container = document.getElementById('certifications-container');
+        const div = document.createElement('div');
+        div.className = 'certification-entry border rounded p-3 mb-3';
+        div.innerHTML = `
+            <div class="mb-2">
+                <label class="form-label">Certification Name</label>
+                <input type="text" class="form-control cert-name" value="${cert.name || ''}" placeholder="e.g., AWS Solutions Architect">
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Issuing Organization</label>
+                    <input type="text" class="form-control cert-org" value="${cert.organization || ''}" placeholder="e.g., Amazon Web Services">
+                </div>
+                <div class="col">
+                    <label class="form-label">Expiration Date</label>
+                    <input type="date" class="form-control cert-expiry" value="${cert.expiry || ''}">
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-cert">Remove</button>
+        `;
+        container.appendChild(div);
+        
+        div.querySelector('.remove-cert').addEventListener('click', function() {
+            container.removeChild(div);
+        });
+    }
+
+    // Languages functionality
+    document.getElementById('add-language').addEventListener('click', function() {
+        addLanguageField();
+    });
+
+    function addLanguageField(lang = {}) {
+        const container = document.getElementById('languages-container');
+        const div = document.createElement('div');
+        div.className = 'language-entry row mb-2';
+        
+        let proficiencyOptions = "";
+        ['Native', 'Fluent', 'Advanced', 'Intermediate', 'Basic'].forEach(level => {
+            const selected = lang.proficiency === level ? 'selected' : '';
+            proficiencyOptions += `<option value="${level}" ${selected}>${level}</option>`;
+        });
+        
+        div.innerHTML = `
+            <div class="col-md-6">
+                <input type="text" class="form-control language-name" value="${lang.language || ''}" placeholder="Language">
+            </div>
+            <div class="col-md-4">
+                <select class="form-select language-proficiency">
+                    ${proficiencyOptions}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger remove-language">Remove</button>
+            </div>
+        `;
+        container.appendChild(div);
+        
+        div.querySelector('.remove-language').addEventListener('click', function() {
+            container.removeChild(div);
+        });
+    }
+
+    // Values functionality
+    document.getElementById('add-value').addEventListener('click', function() {
+        addValueField();
+    });
+
+    function addValueField(value = '') {
+        const container = document.getElementById('values-container');
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2';
+        div.innerHTML = `
+            <input type="text" class="form-control value-item" value="${value}" placeholder="e.g., Innovation">
+            <button type="button" class="btn btn-outline-secondary remove-value">Remove</button>
+        `;
+        container.appendChild(div);
+        
+        div.querySelector('.remove-value').addEventListener('click', function() {
+            container.removeChild(div);
+        });
+    }
+
+    // Form submission - collect all dynamic fields
+    document.querySelector('form').addEventListener('submit', function(event) {
+        // Collect job titles
+        const jobTitles = [];
+        document.querySelectorAll('.job-title').forEach(input => {
+            if (input.value.trim()) {
+                jobTitles.push(input.value.trim());
+            }
+        });
+        document.getElementById('desired_job_titles_json').value = JSON.stringify(jobTitles);
+
+        // Collect portfolio links
+        const portfolioLinks = [];
+        document.querySelectorAll('.portfolio-link').forEach(input => {
+            if (input.value.trim()) {
+                portfolioLinks.push(input.value.trim());
+            }
+        });
+        document.getElementById('portfolio_links_json').value = JSON.stringify(portfolioLinks);
+
+        // Collect certifications
+        const certifications = [];
+        document.querySelectorAll('.certification-entry').forEach(cert => {
+            const name = cert.querySelector('.cert-name').value.trim();
+            const org = cert.querySelector('.cert-org').value.trim();
+            const expiry = cert.querySelector('.cert-expiry').value;
+            
+            if (name) {
+                certifications.push({
+                    name: name,
+                    organization: org,
+                    expiry: expiry
+                });
+            }
+        });
+        document.getElementById('certifications_json').value = JSON.stringify(certifications);
+
+        // Collect languages
+        const languages = [];
+        document.querySelectorAll('.language-entry').forEach(lang => {
+            const language = lang.querySelector('.language-name').value.trim();
+            const proficiency = lang.querySelector('.language-proficiency').value;
+            
+            if (language) {
+                languages.push({
+                    language: language,
+                    proficiency: proficiency
+                });
+            }
+        });
+        document.getElementById('languages_json').value = JSON.stringify(languages);
+
+        // Collect values
+        const values = [];
+        document.querySelectorAll('.value-item').forEach(input => {
+            if (input.value.trim()) {
+                values.push(input.value.trim());
+            }
+        });
+        document.getElementById('applicant_values_json').value = JSON.stringify(values);
+    });
+</script>
+{% endblock %}
