@@ -4,6 +4,7 @@ from models.user import db, User
 from models.application import Application
 import os
 from dotenv import load_dotenv
+from app import app, db
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +31,7 @@ def init_db():
         
         # Create all tables
         db.create_all()
+        print("Database tables created.")
         
         # Check if tables were created
         engine = db.engine

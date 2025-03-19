@@ -1,44 +1,115 @@
 # InstantApply
 
-Automated job application tool.
+A platform to streamline job applications.
 Demo Video: https://drive.google.com/drive/folders/1MXEEPN3f61T9VI8zWsxLmzQC34YKX91r?usp=sharing
 Hosted: https://app.near.ai/agents/quickzebra7715.near/InstantApply/latest
 
+## Development Setup
 
-## Dependencies
+### Prerequisites
 
-- Python 3.9+
-- Rust toolchain (for some Python package dependencies)
-- Playwright
+- Python 3.8+
+- pip
+- virtualenv (recommended)
 
-## Setup
+### Installation
 
-1. Install dependencies:
+1. Clone the repository
+   ```
+   git clone <repository-url>
+   cd InstantApply
+   ```
 
-```bash
-# Install Rust and update pip
-chmod +x setup_dependencies.sh
-./setup_dependencies.sh
-
-# Create and activate a virtual environment
-python3.11 -m venv venv
-source venv/bin/activate  # On Windows: myenv\Scripts\activate
-
-# Install Python packages
-pip install -r requirements.txt
-```
-
-2. Set up environment variables:
+2. Run the setup script to install dependencies and set up the development environment
+   ```
+   chmod +x setup_dev.sh
+   ./setup_dev.sh
+   ```
    
-```bash
-cp .env.example .env
-# Edit .env with your API keys and settings
+   This script will:
+   - Install the necessary system dependencies for your OS
+   - Create and activate a virtual environment
+   - Install Python dependencies
+   - Initialize the database
+
+3. Alternatively, you can manually set up the environment:
+   ```
+   # Create and activate virtual environment
+   python3.11 -m venv venv
+   source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+   
+   # Install dependencies
+   pip install -r requirements.txt
+   
+   # Initialize database
+   python init_db.py
+   ```
+
+### For Python 3.12 Users
+
+If you're using Python 3.12, there are known compatibility issues with some packages, especially greenlet. To install properly:
+
+1. Make the installation script executable:
+   ```bash
+   chmod +x install_dependencies.sh
+   ```
+
+2. Run the installation script:
+   ```bash
+   ./install_dependencies.sh
+   ```
+
+### Manual Installation
+
+If the script doesn't work for you:
+
+1. Install greenlet first with special flags:
+   ```bash
+   pip install --no-build-isolation greenlet==3.0.1
+   ```
+
+2. Then install the rest of the requirements:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Troubleshooting
+
+If you still encounter issues:
+
+- Try installing from source: `pip install greenlet==3.0.1 --no-binary :all:`
+- Try a different greenlet version: `pip install greenlet==2.0.2`
+- Install SQLAlchemy separately: `pip install SQLAlchemy==2.0.21 --no-deps`
+
+### Running the Application
+
+1. Activate the virtual environment if not already active:
+   ```
+   source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+   ```
+
+2. Start the Flask development server:
+   ```
+   flask run
+   ```
+
+3. Access the application at http://127.0.0.1:5000
+
+### Database Migrations
+
+To create a new migration after model changes:
+```
+flask db migrate -m "Description of changes"
 ```
 
-3. Install Playwright browsers:
+To apply migrations:
+```
+flask db upgrade
+```
 
-```bash
-playwright install
+To roll back a migration:
+```
+flask db downgrade
 ```
 
 ## Features
@@ -55,14 +126,6 @@ playwright install
 1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Create a new API key
 3. Add it to your .env file: `GEMINI_API_KEY=your_key_here`
-
-### Running the Application
-
-```
-flask run
-```
-
-Navigate to `http://localhost:5000` in your browser.
 
 ## Troubleshooting
 
