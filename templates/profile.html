@@ -691,7 +691,7 @@
 
         // Job Titles
         try {
-            const jobTitles = {{ current_user.desired_job_titles|tojson|safe if current_user.desired_job_titles else '[]' }};
+            const jobTitles = JSON.parse('{{ current_user.desired_job_titles|tojson|safe if current_user.desired_job_titles else "[]" }}');
             if (jobTitles.length) {
                 const container = document.getElementById('job-titles-container');
                 container.innerHTML = '';
@@ -705,7 +705,7 @@
 
         // Portfolio Links
         try {
-            const portfolioLinks = {{ current_user.portfolio_links|tojson|safe if current_user.portfolio_links else '[]' }};
+            const portfolioLinks = JSON.parse('{{ current_user.portfolio_links|tojson|safe if current_user.portfolio_links else "[]" }}');
             if (portfolioLinks.length) {
                 const container = document.getElementById('portfolio-links-container');
                 container.innerHTML = '';
@@ -719,7 +719,7 @@
 
         // Certifications
         try {
-            const certifications = {{ current_user.certifications|tojson|safe if current_user.certifications else '[]' }};
+            const certifications = JSON.parse('{{ current_user.certifications|tojson|safe if current_user.certifications else "[]" }}');
             if (certifications.length) {
                 const container = document.getElementById('certifications-container');
                 container.innerHTML = '';
@@ -733,7 +733,7 @@
 
         // Languages
         try {
-            const languages = {{ current_user.languages|tojson|safe if current_user.languages else '[]' }};
+            const languages = JSON.parse('{{ current_user.languages|tojson|safe if current_user.languages else "[]" }}');
             if (languages.length) {
                 const container = document.getElementById('languages-container');
                 container.innerHTML = '';
@@ -747,7 +747,7 @@
 
         // Values
         try {
-            const values = {{ current_user.applicant_values|tojson|safe if current_user.applicant_values else '[]' }};
+            const values = JSON.parse('{{ current_user.applicant_values|tojson|safe if current_user.applicant_values else "[]" }}');
             if (values.length) {
                 const container = document.getElementById('values-container');
                 container.innerHTML = '';
