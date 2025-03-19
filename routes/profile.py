@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 import PyPDF2
 import docx2txt
 import datetime
+import logging
 
 from models.user import db, User
 from forms.profile import ProfileForm
@@ -18,6 +19,9 @@ def profile():
     form = ProfileForm()
     
     if request.method == 'POST':
+        # Debug logging
+        current_app.logger.debug(f"Form data received: {list(request.form.keys())}")
+        
         # Process standard form fields
         current_user.name = request.form.get('name', current_user.name)
         current_user.professional_summary = request.form.get('professional_summary')
@@ -25,9 +29,57 @@ def profile():
         current_user.authorization_status = request.form.get('authorization_status')
         current_user.linkedin_url = request.form.get('linkedin_url')
         
-        # Process JSON fields
-        current_user.desired_job_titles = request.form.get('desired_job_titles')
-        current_user.portfolio_links = request.form.get('portfolio_links')
+        # Process JSON fields with proper error handling
+        try:
+            # Process desired job titles
+            job_titles_json = request.form.get('desired_job_titles')
+            if job_titles_json:
+                current_app.logger.debug(f"Raw job titles: {job_titles_json}")
+                try:
+                    job_titles = json.loads(job_titles_json)
+                    current_app.logger.debug(f"Parsed job titles type: {type(job_titles)}")
+                    current_app.logger.debug(f"Parsed job titles: {job_titles}")
+                    
+                    # Ensure job_titles is a list (not a dict or something else)
+                    if not isinstance(job_titles, list):
+                        job_titles = list(job_titles) if hasattr(job_titles, '__iter__') else [str(job_titles)]
+                        current_app.logger.warning(f"Converted job_titles to list: {job_titles}")
+                    
+                    # The property setter will handle JSON serialization
+                    current_user.desired_job_titles = job_titles
+                    current_app.logger.info(f"Processed job titles: {current_user.desired_job_titles}")
+                    current_app.logger.debug(f"Stored representation: {current_user._desired_job_titles}")
+                except Exception as e:
+                    current_app.logger.error(f"Error processing job titles: {str(e)}")
+                    flash(f"Error processing job titles: {str(e)}", "danger")
+            
+            # Process portfolio links
+            portfolio_links_json = request.form.get('portfolio_links')
+            if portfolio_links_json:
+                current_app.logger.debug(f"Raw portfolio links: {portfolio_links_json}")
+                portfolio_links = json.loads(portfolio_links_json)
+                current_user.portfolio_links = portfolio_links
+            
+            # Process certifications
+            certifications_json = request.form.get('certifications')
+            if certifications_json:
+                current_user.certifications = json.loads(certifications_json)
+            
+            # Process languages
+            languages_json = request.form.get('languages')
+            if languages_json:
+                current_user.languages = json.loads(languages_json)
+            
+            # Process applicant values
+            values_json = request.form.get('applicant_values')
+            if values_json:
+                current_user.applicant_values = json.loads(values_json)
+                
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"JSON parsing error: {str(e)}")
+            flash(f"Error processing form data: {str(e)}", "danger")
+        
+        # Process other fields
         current_user.desired_salary_range = request.form.get('desired_salary_range')
         current_user.work_mode_preference = request.form.get('work_mode_preference')
         
@@ -42,13 +94,10 @@ def profile():
             current_user.available_start_date = None
             
         current_user.preferred_company_type = request.form.get('preferred_company_type')
-        current_user.certifications = request.form.get('certifications')
-        current_user.languages = request.form.get('languages')
         current_user.career_goals = request.form.get('career_goals')
         current_user.biggest_achievement = request.form.get('biggest_achievement')
         current_user.work_style = request.form.get('work_style')
         current_user.industry_attraction = request.form.get('industry_attraction')
-        current_user.applicant_values = request.form.get('applicant_values')
         
         # Process resume text
         current_user.resume = request.form.get('resume', '')
@@ -86,10 +135,8 @@ def extract_text_from_resume(file_path):
         
         if file_ext == '.pdf':
             with open(file_path, 'rb') as file:
-                # Replace deprecated PdfFileReader with PdfReader
                 reader = PyPDF2.PdfReader(file)
                 text = ''
-                # Update to use the new len(reader.pages) and reader.pages[page_num]
                 for page_num in range(len(reader.pages)):
                     text += reader.pages[page_num].extract_text()
                 return text

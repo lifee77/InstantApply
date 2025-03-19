@@ -24,9 +24,9 @@ class User(db.Model, UserMixin):
     professional_summary = db.Column(db.Text)  # Professional summary/objective statement
     willing_to_relocate = db.Column(db.Boolean, default=False)
     authorization_status = db.Column(db.String(100))  # Work authorization status
-    desired_job_titles = db.Column(db.Text)  # JSON string of job titles
+    _desired_job_titles = db.Column('desired_job_titles', db.Text)  # JSON string of job titles
     linkedin_url = db.Column(db.String(255))
-    portfolio_links = db.Column(db.Text)  # JSON string of GitHub/portfolio links
+    _portfolio_links = db.Column('portfolio_links', db.Text)  # JSON string of GitHub/portfolio links
     
     # Work Preferences
     desired_salary_range = db.Column(db.String(100))
@@ -35,8 +35,8 @@ class User(db.Model, UserMixin):
     preferred_company_type = db.Column(db.String(100))  # Startup vs. enterprise
     
     # Additional Qualifications
-    certifications = db.Column(db.Text)  # JSON string of certifications with expiry dates
-    languages = db.Column(db.Text)  # JSON string of languages and proficiency levels
+    _certifications = db.Column('certifications', db.Text)  # JSON string of certifications with expiry dates
+    _languages = db.Column('languages', db.Text)  # JSON string of languages and proficiency levels
     
     # Application-Specific Questions
     career_goals = db.Column(db.Text)  # Short and long-term goals
@@ -45,7 +45,7 @@ class User(db.Model, UserMixin):
     industry_attraction = db.Column(db.Text)  # What attracted to this industry/field
     
     # Values
-    applicant_values = db.Column(db.Text)  # JSON string of applicant values
+    _applicant_values = db.Column('applicant_values', db.Text)  # JSON string of applicant values
     
     # Demographic Information
     race_ethnicity = db.Column(db.String(100))
@@ -71,6 +71,166 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
         
+    @property
+    def desired_job_titles(self):
+        if self._desired_job_titles:
+            try:
+                return json.loads(self._desired_job_titles)
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return []
+    
+    @desired_job_titles.setter
+    def desired_job_titles(self, value):
+        if value is None:
+            self._desired_job_titles = None
+        else:
+            # Ensure value is a list before converting to JSON
+            if not isinstance(value, list):
+                if isinstance(value, str):
+                    try:
+                        # If it's a string, try to parse it as JSON
+                        value = json.loads(value)
+                    except json.JSONDecodeError:
+                        # If parsing fails, treat it as a single item
+                        value = [value]
+                elif hasattr(value, '__iter__'):
+                    # If it's iterable but not a list, convert to list
+                    value = list(value)
+                else:
+                    # If it's not iterable, make it a single-item list
+                    value = [str(value)]
+            
+            self._desired_job_titles = json.dumps(value)
+    
+    @property
+    def portfolio_links(self):
+        if self._portfolio_links:
+            try:
+                return json.loads(self._portfolio_links)
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return []
+    
+    @portfolio_links.setter
+    def portfolio_links(self, value):
+        if value is None:
+            self._portfolio_links = None
+        else:
+            # Ensure value is a list before converting to JSON
+            if not isinstance(value, list):
+                if isinstance(value, str):
+                    try:
+                        # If it's a string, try to parse it as JSON
+                        value = json.loads(value)
+                    except json.JSONDecodeError:
+                        # If parsing fails, treat it as a single item
+                        value = [value]
+                elif hasattr(value, '__iter__'):
+                    # If it's iterable but not a list, convert to list
+                    value = list(value)
+                else:
+                    # If it's not iterable, make it a single-item list
+                    value = [str(value)]
+            
+            self._portfolio_links = json.dumps(value)
+    
+    @property
+    def certifications(self):
+        if self._certifications:
+            try:
+                return json.loads(self._certifications)
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return []
+    
+    @certifications.setter
+    def certifications(self, value):
+        if value is None:
+            self._certifications = None
+        else:
+            # Ensure value is a list before converting to JSON
+            if not isinstance(value, list):
+                if isinstance(value, str):
+                    try:
+                        # If it's a string, try to parse it as JSON
+                        value = json.loads(value)
+                    except json.JSONDecodeError:
+                        # If parsing fails, treat it as a single item
+                        value = [value]
+                elif hasattr(value, '__iter__'):
+                    # If it's iterable but not a list, convert to list
+                    value = list(value)
+                else:
+                    # If it's not iterable, make it a single-item list
+                    value = [str(value)]
+            
+            self._certifications = json.dumps(value)
+    
+    @property
+    def languages(self):
+        if self._languages:
+            try:
+                return json.loads(self._languages)
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return []
+    
+    @languages.setter
+    def languages(self, value):
+        if value is None:
+            self._languages = None
+        else:
+            # Ensure value is a list before converting to JSON
+            if not isinstance(value, list):
+                if isinstance(value, str):
+                    try:
+                        # If it's a string, try to parse it as JSON
+                        value = json.loads(value)
+                    except json.JSONDecodeError:
+                        # If parsing fails, treat it as a single item
+                        value = [value]
+                elif hasattr(value, '__iter__'):
+                    # If it's iterable but not a list, convert to list
+                    value = list(value)
+                else:
+                    # If it's not iterable, make it a single-item list
+                    value = [str(value)]
+            
+            self._languages = json.dumps(value)
+    
+    @property
+    def applicant_values(self):
+        if self._applicant_values:
+            try:
+                return json.loads(self._applicant_values)
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return []
+    
+    @applicant_values.setter
+    def applicant_values(self, value):
+        if value is None:
+            self._applicant_values = None
+        else:
+            # Ensure value is a list before converting to JSON
+            if not isinstance(value, list):
+                if isinstance(value, str):
+                    try:
+                        # If it's a string, try to parse it as JSON
+                        value = json.loads(value)
+                    except json.JSONDecodeError:
+                        # If parsing fails, treat it as a single item
+                        value = [value]
+                elif hasattr(value, '__iter__'):
+                    # If it's iterable but not a list, convert to list
+                    value = list(value)
+                else:
+                    # If it's not iterable, make it a single-item list
+                    value = [str(value)]
+            
+            self._applicant_values = json.dumps(value)
+    
     def to_dict(self):
         return {
             'id': self.id,
