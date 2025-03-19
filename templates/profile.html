@@ -1,204 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Profile - InstantApply</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        .profile-view {
-            margin-bottom: 30px;
-        }
-        .profile-view h3 {
-            color: #0066cc;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-        }
-        .profile-view p {
-            margin: 5px 0;
-        }
-        .profile-view .resume-text {
-            white-space: pre-wrap;
-            background-color: #f9f9f9;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            max-height: 400px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .edit-form {
-            display: none;
-        }
-        .profile-actions {
-            margin: 25px 0;
-        }
-        .btn-edit {
-            background-color: #0066cc;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn-edit:hover {
-            background-color: #0052a3;
-        }
-        .btn-cancel {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        .btn-cancel:hover {
-            background-color: #5a6268;
-        }
-        .empty-field {
-            color: #6c757d;
-            font-style: italic;
-        }
-        .resume-toolbar {
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: flex-end;
-        }
-        .resume-toolbar button {
-            background-color: transparent;
-            border: 1px solid #0066cc;
-            color: #0066cc;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .resume-toolbar button:hover {
-            background-color: #f0f7ff;
-        }
-        .btn-copy {
-            margin-right: 10px;
-        }
-        .upload-progress {
-            height: 5px;
-            margin-top: 10px;
-            background-color: #e9ecef;
-            border-radius: 3px;
-            overflow: hidden;
-            display: none;
-        }
-        .progress-bar {
-            height: 100%;
-            background-color: #0066cc;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        .upload-status {
-            font-size: 12px;
-            margin-top: 5px;
-            color: #6c757d;
-            display: none;
-        }
-        .resume-file-info {
-            background-color: #e9f7fd;
-            padding: 10px 15px;
-            border: 1px solid #c2e7f5;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .resume-file-info p {
-            margin: 0;
-            color: #0c5460;
-        }
-        
-        .btn-download-original {
-            background-color: #17a2b8;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .btn-download-original:hover {
-            background-color: #138496;
-        }
-        
-        .resume-toolbar button, .btn-download-original {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .icon {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        
-        .icon-download {
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="white"><path d="M8 12l-4-4h2.5V4h3v4H12L8 12zm-.5 4c-3.59 0-6.5-2.91-6.5-6.5S3.91 3 7.5 3 14 5.91 14 9.5 11.09 16 7.5 16z"/></svg>');
-        }
-        
-        .icon-copy {
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M4 4v10h10V4H4zm9 9H5V5h8v8zm-3-9H2v10h1V5h7V4z"/></svg>');
-        }
-        
-        .icon-text {
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M13.5 1h-11C1.67 1 1 1.67 1 2.5v11c0 .83.67 1.5 1.5 1.5h11c.83 0 1.5-.67 1.5-1.5v-11c0-.83-.67-1.5-1.5-1.5zM5 13L2 7h2l2 4 2-4h2L7 13H5zm8-2h-4v-1h4v1zm0-2h-4v-1h4v1zm0-2h-4V6h4v1z"/></svg>');
-        }
-        
-        .icon-file {
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230c5460"><path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1zm3 13H4V2h4v4h4v8z"/></svg>');
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>InstantApply</h1>
-        <p>Automated Job Application Assistant</p>
-        <nav>
-            <a href="/">Home</a> | 
-            <a href="/profile">Profile</a> |
-            <a href="/applications">My Applications</a> |
-            <a href="/logout">Logout</a>
-        </nav>
-    </header>
+{% extends "base.html" %}
+
+{% block title %}User Profile - InstantApply{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
     
-    <main>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        
-        <section class="profile-section">
-            <h2>Your Profile</h2>
-            
-            <!-- View Profile Section -->
-            <div id="profile-view" class="profile-view">
+    <h1>Your Profile</h1>
+    <p class="lead">Complete your profile to improve your job application process</p>
+
+    <!-- Profile View Section -->
+    <div id="profile-view" class="profile-view">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
                 <h3>Personal Information</h3>
+            </div>
+            <div class="card-body">
                 <p><strong>Name:</strong> {{ current_user.name }}</p>
                 <p><strong>Email:</strong> {{ current_user.email }}</p>
-                
+                {% if current_user.professional_summary %}
+                    <p><strong>Professional Summary:</strong> {{ current_user.professional_summary }}</p>
+                {% endif %}
+                <p><strong>Willing to Relocate:</strong> {{ 'Yes' if current_user.willing_to_relocate else 'No' }}</p>
+                {% if current_user.authorization_status %}
+                    <p><strong>Work Authorization:</strong> {{ current_user.authorization_status }}</p>
+                {% endif %}
+                {% if current_user.linkedin_url %}
+                    <p><strong>LinkedIn:</strong> <a href="{{ current_user.linkedin_url }}" target="_blank">{{ current_user.linkedin_url }}</a></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Resume Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
                 <h3>Resume</h3>
+            </div>
+            <div class="card-body">
                 {% if current_user.resume_file_path %}
                 <div class="resume-file-info">
                     <p><span class="icon icon-file"></span> Original resume file: {{ current_user.resume_filename }}</p>
@@ -208,152 +54,601 @@
                 
                 {% if current_user.resume %}
                     <div class="resume-toolbar">
-                        <button class="btn-copy" onclick="copyResumeText()"><span class="icon icon-copy"></span> Copy Text</button>
-                        <button class="btn-download" onclick="downloadResumeText()"><span class="icon icon-text"></span> Download Text</button>
+                        <button class="btn-copy btn btn-outline-primary btn-sm" onclick="copyResumeText()"><span class="icon icon-copy"></span> Copy Text</button>
+                        <button class="btn-download btn btn-outline-primary btn-sm" onclick="downloadResumeText()"><span class="icon icon-text"></span> Download Text</button>
                     </div>
                     <div class="resume-text" id="resume-content">{{ current_user.resume }}</div>
                 {% else %}
                     <p class="empty-field">No resume uploaded yet. Click 'Edit Profile' to add your resume.</p>
                 {% endif %}
-                
-                <h3>Skills</h3>
+            </div>
+        </div>
+
+        <!-- Skills and Experience -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Skills & Experience</h3>
+            </div>
+            <div class="card-body">
                 {% if current_user.skills %}
+                    <h4>Skills</h4>
                     <p>{{ current_user.skills }}</p>
-                {% else %}
-                    <p class="empty-field">No skills added yet. Click 'Edit Profile' to add your skills.</p>
                 {% endif %}
                 
-                <h3>Experience</h3>
                 {% if current_user.experience %}
+                    <h4>Experience</h4>
                     <div class="resume-text">{{ current_user.experience }}</div>
-                {% else %}
-                    <p class="empty-field">No experience added yet. Click 'Edit Profile' to add your experience.</p>
+                {% endif %}
+
+                {% if current_user.desired_job_titles %}
+                    <h4>Desired Job Titles</h4>
+                    <ul>
+                        {% for title in current_user.desired_job_titles %}
+                            <li>{{ title }}</li>
+                        {% endfor %}
+                    </ul>
                 {% endif %}
                 
-                <div class="profile-actions">
-                    <button id="btn-edit-profile" class="btn-edit">Edit Profile</button>
+                {% if current_user.portfolio_links %}
+                    <h4>Portfolio Links</h4>
+                    <ul>
+                        {% for link in current_user.portfolio_links %}
+                            <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Work Preferences -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Work Preferences</h3>
+            </div>
+            <div class="card-body">
+                {% if current_user.desired_salary_range %}
+                    <p><strong>Desired Salary:</strong> {{ current_user.desired_salary_range }}</p>
+                {% endif %}
+                {% if current_user.work_mode_preference %}
+                    <p><strong>Work Mode:</strong> {{ current_user.work_mode_preference }}</p>
+                {% endif %}
+                {% if current_user.available_start_date %}
+                    <p><strong>Available Start Date:</strong> {{ current_user.available_start_date }}</p>
+                {% endif %}
+                {% if current_user.preferred_company_type %}
+                    <p><strong>Preferred Company Type:</strong> {{ current_user.preferred_company_type }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Additional Qualifications -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Additional Qualifications</h3>
+            </div>
+            <div class="card-body">
+                {% if current_user.certifications %}
+                    <h4>Certifications</h4>
+                    <ul>
+                        {% for cert in current_user.certifications %}
+                            <li>
+                                <strong>{{ cert.name }}</strong>
+                                {% if cert.organization %} - {{ cert.organization }}{% endif %}
+                                {% if cert.expiry %} (Expires: {{ cert.expiry }}){% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                {% if current_user.languages %}
+                    <h4>Languages</h4>
+                    <ul>
+                        {% for lang in current_user.languages %}
+                            <li><strong>{{ lang.language }}</strong> - {{ lang.proficiency }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Career Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Career Information</h3>
+            </div>
+            <div class="card-body">
+                {% if current_user.career_goals %}
+                    <p><strong>Career Goals:</strong> {{ current_user.career_goals }}</p>
+                {% endif %}
+                {% if current_user.biggest_achievement %}
+                    <p><strong>Biggest Achievement:</strong> {{ current_user.biggest_achievement }}</p>
+                {% endif %}
+                {% if current_user.work_style %}
+                    <p><strong>Work Style:</strong> {{ current_user.work_style }}</p>
+                {% endif %}
+                {% if current_user.industry_attraction %}
+                    <p><strong>Industry Attraction:</strong> {{ current_user.industry_attraction }}</p>
+                {% endif %}
+                {% if current_user.applicant_values %}
+                    <h4>Professional Values</h4>
+                    <ul>
+                        {% for value in current_user.applicant_values %}
+                            <li>{{ value }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Demographic Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Demographic Information</h3>
+                <small class="text-white-50">This information is optional and only used when required by employers</small>
+            </div>
+            <div class="card-body">
+                {% if current_user.race_ethnicity %}
+                    <p><strong>Race/Ethnicity:</strong> {{ current_user.race_ethnicity }}</p>
+                {% endif %}
+                {% if current_user.gender %}
+                    <p><strong>Gender:</strong> {{ current_user.gender }}</p>
+                {% endif %}
+                {% if current_user.graduation_date %}
+                    <p><strong>Graduation Date:</strong> {{ current_user.graduation_date }}</p>
+                {% endif %}
+                {% if current_user.disability_status %}
+                    <p><strong>Disability Status:</strong> {{ current_user.disability_status }}</p>
+                {% endif %}
+                {% if current_user.military_status and current_user.military_status != "No Military Service" %}
+                    <p><strong>Military Status:</strong> {{ current_user.military_status }}</p>
+                    {% if current_user.military_branch %}
+                        <p><strong>Military Branch:</strong> {{ current_user.military_branch }}</p>
+                    {% endif %}
+                    {% if current_user.military_discharge_date %}
+                        <p><strong>Discharge Date:</strong> {{ current_user.military_discharge_date }}</p>
+                    {% endif %}
+                    {% if current_user.veteran_status %}
+                        <p><strong>Veteran Status:</strong> {{ current_user.veteran_status }}</p>
+                    {% endif %}
+                {% endif %}
+                
+                <!-- Immigration Information -->
+                {% if current_user.needs_sponsorship or current_user.visa_status %}
+                    <h4>Immigration Information</h4>
+                    <p><strong>Needs Sponsorship:</strong> {{ 'Yes' if current_user.needs_sponsorship else 'No' }}</p>
+                    {% if current_user.visa_status %}
+                        <p><strong>Visa Status:</strong> {{ current_user.visa_status }}</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 col-md-6 mx-auto mb-4">
+            <button id="btn-edit-profile" class="btn btn-primary btn-lg">Edit Profile</button>
+        </div>
+    </div>
+
+    <!-- Edit Profile Form -->
+    <div id="profile-edit" class="edit-form" style="display: none;">
+        <form id="user-profile-form" method="POST" action="{{ url_for('profile.profile') }}" enctype="multipart/form-data">
+            {{ form.csrf_token if form }}
+            
+            <!-- Personal Information Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Personal Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" readonly>
+                        <div class="form-text">Email cannot be changed.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="professional_summary" class="form-label">Professional Summary</label>
+                        <textarea class="form-control" id="professional_summary" name="professional_summary" rows="4">{{ current_user.professional_summary }}</textarea>
+                        <div class="form-text">Brief overview of your professional background, skills, and career objectives.</div>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="willing_to_relocate" name="willing_to_relocate" {% if current_user.willing_to_relocate %}checked{% endif %}>
+                        <label class="form-check-label" for="willing_to_relocate">Willing to Relocate</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="authorization_status" class="form-label">Work Authorization Status</label>
+                        <select class="form-select" id="authorization_status" name="authorization_status">
+                            <option value="" {% if not current_user.authorization_status %}selected{% endif %}>Select status...</option>
+                            <option value="US Citizen" {% if current_user.authorization_status == "US Citizen" %}selected{% endif %}>US Citizen</option>
+                            <option value="Green Card Holder" {% if current_user.authorization_status == "Green Card Holder" %}selected{% endif %}>Green Card Holder</option>
+                            <option value="H1B Visa" {% if current_user.authorization_status == "H1B Visa" %}selected{% endif %}>H1B Visa</option>
+                            <option value="F1 OPT" {% if current_user.authorization_status == "F1 OPT" %}selected{% endif %}>F1 OPT</option>
+                            <option value="Other" {% if current_user.authorization_status and current_user.authorization_status not in ["US Citizen", "Green Card Holder", "H1B Visa", "F1 OPT"] %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="linkedin_url" class="form-label">LinkedIn URL</label>
+                        <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{ current_user.linkedin_url }}">
+                    </div>
                 </div>
             </div>
             
-            <!-- Edit Profile Form -->
-            <div id="profile-edit" class="edit-form">
-                <form id="user-profile-form">
-                    <div class="form-group">
-                        <label for="user-name">Full Name</label>
-                        <input type="text" id="user-name" name="user-name" value="{{ current_user.name }}" required>
+            <!-- Resume Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Resume</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="user-resume" class="form-label">Resume Text</label>
+                        <textarea id="user-resume" name="resume" class="form-control" rows="8" placeholder="Paste your resume text here or upload a file">{{ current_user.resume or '' }}</textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="user-email">Email</label>
-                        <input type="email" id="user-email" name="user-email" value="{{ current_user.email }}" required readonly>
-                        <small class="form-text">Email cannot be changed.</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="user-resume">Resume</label>
-                        <textarea id="user-resume" name="user-resume" rows="8" placeholder="Paste your resume text here or upload a file">{{ current_user.resume or '' }}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="user-resume-file">Upload Resume</label>
-                        <input type="file" id="user-resume-file" name="user-resume-file" accept=".pdf,.doc,.docx,.txt">
-                        <small class="form-text">Supported formats: PDF, DOCX, DOC, TXT. The original file will be stored along with extracted text.</small>
+                    <div class="mb-3">
+                        <label for="user-resume-file" class="form-label">Upload Resume</label>
+                        <input type="file" id="user-resume-file" name="resume_file" class="form-control" accept=".pdf,.doc,.docx,.txt">
+                        <div class="form-text">Supported formats: PDF, DOCX, DOC, TXT. The original file will be stored along with extracted text.</div>
                         
-                        <div class="upload-progress">
-                            <div class="progress-bar" id="upload-progress-bar"></div>
+                        <div class="upload-progress mt-2" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar" id="upload-progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
                         </div>
-                        <div id="upload-status" class="upload-status"></div>
+                        <div id="upload-status" class="upload-status mt-2" style="display: none;"></div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="user-skills">Skills</label>
-                        <textarea id="user-skills" name="user-skills" rows="3" placeholder="List your skills, separated by commas">{{ current_user.skills or '' }}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="user-experience">Experience</label>
-                        <textarea id="user-experience" name="user-experience" rows="5" placeholder="Describe your work experience">{{ current_user.experience or '' }}</textarea>
-                    </div>
-                    
-                    <button type="submit" class="btn-edit">Save Profile</button>
-                    <button type="button" id="btn-cancel-edit" class="btn-cancel">Cancel</button>
-                </form>
+                </div>
             </div>
-        </section>
-    </main>
-    
-    <footer>
-        <p>&copy; 2023 InstantApply</p>
-    </footer>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const profileView = document.getElementById('profile-view');
-            const profileEdit = document.getElementById('profile-edit');
-            const btnEditProfile = document.getElementById('btn-edit-profile');
-            const btnCancelEdit = document.getElementById('btn-cancel-edit');
-            const userProfileForm = document.getElementById('user-profile-form');
-            
-            // Show edit form
-            btnEditProfile.addEventListener('click', function() {
-                profileView.style.display = 'none';
-                profileEdit.style.display = 'block';
-            });
-            
-            // Cancel editing
-            btnCancelEdit.addEventListener('click', function() {
-                profileEdit.style.display = 'none';
-                profileView.style.display = 'block';
-            });
-            
-            // Handle form submission
-            userProfileForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const formData = {
-                    name: document.getElementById('user-name').value,
-                    email: document.getElementById('user-email').value,
-                    resume: document.getElementById('user-resume').value,
-                    skills: document.getElementById('user-skills').value,
-                    experience: document.getElementById('user-experience').value
-                };
-                
-                // Check if we have a base64 resume to include
-                const resumeFileInput = document.getElementById('user-resume-file');
-                if (resumeFileInput.getAttribute('data-base64')) {
-                    formData.resume = resumeFileInput.getAttribute('data-base64');
-                }
-                
-                // Save profile data via API
-                fetch('/api/user', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Profile saved successfully!');
-                        window.location.reload();
-                    } else {
-                        alert('Error: ' + (data.message || 'Failed to save profile'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while saving your profile. Please try again.');
-                });
-            });
-            
-            // Handle file upload with preview
-            const resumeFileInput = document.getElementById('user-resume-file');
-            const resumeTextarea = document.getElementById('user-resume');
-            const uploadProgress = document.querySelector('.upload-progress');
-            const progressBar = document.getElementById('upload-progress-bar');
-            const uploadStatus = document.getElementById('upload-status');
-            
+
+            <!-- Skills and Experience -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Skills & Experience</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="user-skills" class="form-label">Skills</label>
+                        <textarea id="user-skills" name="skills" class="form-control" rows="3" placeholder="List your skills, separated by commas">{{ current_user.skills or '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="user-experience" class="form-label">Experience</label>
+                        <textarea id="user-experience" name="experience" class="form-control" rows="5" placeholder="Describe your work experience">{{ current_user.experience or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="desired_job_titles" class="form-label">Desired Job Titles</label>
+                        <div id="job-titles-container">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control job-title" placeholder="e.g., Software Engineer">
+                                <button type="button" class="btn btn-outline-secondary remove-job-title">Remove</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-job-title" class="btn btn-secondary btn-sm mt-2">+ Add Another Title</button>
+                        <input type="hidden" name="desired_job_titles" id="desired_job_titles_json">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="portfolio_links" class="form-label">Portfolio Links</label>
+                        <div id="portfolio-links-container">
+                            <div class="input-group mb-2">
+                                <input type="url" class="form-control portfolio-link" placeholder="https://github.com/yourusername">
+                                <button type="button" class="btn btn-outline-secondary remove-portfolio-link">Remove</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-portfolio-link" class="btn btn-secondary btn-sm mt-2">+ Add Another Link</button>
+                        <input type="hidden" name="portfolio_links" id="portfolio_links_json">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Work Preferences -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Work Preferences</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="desired_salary_range" class="form-label">Desired Salary Range</label>
+                        <input type="text" class="form-control" id="desired_salary_range" name="desired_salary_range" placeholder="e.g., $80,000 - $100,000" value="{{ current_user.desired_salary_range }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Work Mode Preference</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="work_mode_preference" id="remote" value="Remote" {% if current_user.work_mode_preference == "Remote" %}checked{% endif %}>
+                            <label class="form-check-label" for="remote">Remote</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="work_mode_preference" id="hybrid" value="Hybrid" {% if current_user.work_mode_preference == "Hybrid" %}checked{% endif %}>
+                            <label class="form-check-label" for="hybrid">Hybrid</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="work_mode_preference" id="in-office" value="In-Office" {% if current_user.work_mode_preference == "In-Office" %}checked{% endif %}>
+                            <label class="form-check-label" for="in-office">In-Office</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="available_start_date" class="form-label">Available Start Date</label>
+                        <input type="date" class="form-control" id="available_start_date" name="available_start_date" value="{{ current_user.available_start_date }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="preferred_company_type" class="form-label">Preferred Company Type</label>
+                        <select class="form-select" id="preferred_company_type" name="preferred_company_type">
+                            <option value="" {% if not current_user.preferred_company_type %}selected{% endif %}>Select preference...</option>
+                            <option value="Startup" {% if current_user.preferred_company_type == "Startup" %}selected{% endif %}>Startup</option>
+                            <option value="Small Business" {% if current_user.preferred_company_type == "Small Business" %}selected{% endif %}>Small Business</option>
+                            <option value="Mid-size Company" {% if current_user.preferred_company_type == "Mid-size Company" %}selected{% endif %}>Mid-size Company</option>
+                            <option value="Large Enterprise" {% if current_user.preferred_company_type == "Large Enterprise" %}selected{% endif %}>Large Enterprise</option>
+                            <option value="No Preference" {% if current_user.preferred_company_type == "No Preference" %}selected{% endif %}>No Preference</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Qualifications -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Additional Qualifications</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Certifications</label>
+                        <div id="certifications-container">
+                            <div class="certification-entry border rounded p-3 mb-3">
+                                <div class="mb-2">
+                                    <label class="form-label">Certification Name</label>
+                                    <input type="text" class="form-control cert-name" placeholder="e.g., AWS Solutions Architect">
+                                </div>
+                                <div class="row">
+                                    <div class="col">
+                                        <label class="form-label">Issuing Organization</label>
+                                        <input type="text" class="form-control cert-org" placeholder="e.g., Amazon Web Services">
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label">Expiration Date</label>
+                                        <input type="date" class="form-control cert-expiry">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-cert">Remove</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-certification" class="btn btn-secondary btn-sm">+ Add Certification</button>
+                        <input type="hidden" name="certifications" id="certifications_json">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Languages</label>
+                        <div id="languages-container">
+                            <div class="language-entry row mb-2">
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control language-name" placeholder="Language">
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select language-proficiency">
+                                        <option value="Native">Native</option>
+                                        <option value="Fluent">Fluent</option>
+                                        <option value="Advanced">Advanced</option>
+                                        <option value="Intermediate">Intermediate</option>
+                                        <option value="Basic">Basic</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-danger remove-language">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" id="add-language" class="btn btn-secondary btn-sm mt-2">+ Add Language</button>
+                        <input type="hidden" name="languages" id="languages_json">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Career Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Career Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="career_goals" class="form-label">Career Goals</label>
+                        <textarea class="form-control" id="career_goals" name="career_goals" rows="3">{{ current_user.career_goals }}</textarea>
+                        <div class="form-text">Share your short and long-term career goals.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="biggest_achievement" class="form-label">Biggest Professional Achievement</label>
+                        <textarea class="form-control" id="biggest_achievement" name="biggest_achievement" rows="3">{{ current_user.biggest_achievement }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="work_style" class="form-label">Work Style and Team Preferences</label>
+                        <textarea class="form-control" id="work_style" name="work_style" rows="3">{{ current_user.work_style }}</textarea>
+                        <div class="form-text">Describe your preferred work environment and collaboration style.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="industry_attraction" class="form-label">What Attracted You to This Industry/Field</label>
+                        <textarea class="form-control" id="industry_attraction" name="industry_attraction" rows="3">{{ current_user.industry_attraction }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="applicant_values" class="form-label">Your Professional Values</label>
+                        <div id="values-container">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control value-item" placeholder="e.g., Innovation">
+                                <button type="button" class="btn btn-outline-secondary remove-value">Remove</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-value" class="btn btn-secondary btn-sm mt-2">+ Add Another Value</button>
+                        <input type="hidden" name="applicant_values" id="applicant_values_json">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Demographic Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4>Demographic Information</h4>
+                    <small class="text-white-50">This information is optional and will only be used when specifically required by employers</small>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="race_ethnicity" class="form-label">Race/Ethnicity</label>
+                        <select class="form-select" id="race_ethnicity" name="race_ethnicity">
+                            <option value="" {% if not current_user.race_ethnicity %}selected{% endif %}>Prefer not to say</option>
+                            <option value="American Indian or Alaska Native" {% if current_user.race_ethnicity == "American Indian or Alaska Native" %}selected{% endif %}>American Indian or Alaska Native</option>
+                            <option value="Asian" {% if current_user.race_ethnicity == "Asian" %}selected{% endif %}>Asian</option>
+                            <option value="Black or African American" {% if current_user.race_ethnicity == "Black or African American" %}selected{% endif %}>Black or African American</option>
+                            <option value="Hispanic or Latino" {% if current_user.race_ethnicity == "Hispanic or Latino" %}selected{% endif %}>Hispanic or Latino</option>
+                            <option value="Native Hawaiian or Other Pacific Islander" {% if current_user.race_ethnicity == "Native Hawaiian or Other Pacific Islander" %}selected{% endif %}>Native Hawaiian or Other Pacific Islander</option>
+                            <option value="White" {% if current_user.race_ethnicity == "White" %}selected{% endif %}>White</option>
+                            <option value="Two or More Races" {% if current_user.race_ethnicity == "Two or More Races" %}selected{% endif %}>Two or More Races</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="gender" class="form-label">Gender</label>
+                        <select class="form-select" id="gender" name="gender">
+                            <option value="" {% if not current_user.gender %}selected{% endif %}>Prefer not to say</option>
+                            <option value="Male" {% if current_user.gender == "Male" %}selected{% endif %}>Male</option>
+                            <option value="Female" {% if current_user.gender == "Female" %}selected{% endif %}>Female</option>
+                            <option value="Non-binary" {% if current_user.gender == "Non-binary" %}selected{% endif %}>Non-binary</option>
+                            <option value="Other" {% if current_user.gender == "Other" %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="graduation_date" class="form-label">Graduation Date</label>
+                        <input type="date" class="form-control" id="graduation_date" name="graduation_date" value="{{ current_user.graduation_date }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="disability_status" class="form-label">Disability Status</label>
+                        <select class="form-select" id="disability_status" name="disability_status">
+                            <option value="" {% if not current_user.disability_status %}selected{% endif %}>Prefer not to say</option>
+                            <option value="No disability" {% if current_user.disability_status == "No disability" %}selected{% endif %}>No disability</option>
+                            <option value="Person with a disability" {% if current_user.disability_status == "Person with a disability" %}selected{% endif %}>Person with a disability</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="military_status" class="form-label">Military Status</label>
+                        <select class="form-select" id="military_status" name="military_status" onchange="toggleMilitaryFields()">
+                            <option value="" {% if not current_user.military_status %}selected{% endif %}>Select status...</option>
+                            <option value="No Military Service" {% if current_user.military_status == "No Military Service" %}selected{% endif %}>No Military Service</option>
+                            <option value="Active Duty" {% if current_user.military_status == "Active Duty" %}selected{% endif %}>Active Duty</option>
+                            <option value="Veteran" {% if current_user.military_status == "Veteran" %}selected{% endif %}>Veteran</option>
+                            <option value="Reserves" {% if current_user.military_status == "Reserves" %}selected{% endif %}>Reserves</option>
+                        </select>
+                    </div>
+
+                    <div id="military-additional-fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="military_branch" class="form-label">Military Branch</label>
+                            <select class="form-select" id="military_branch" name="military_branch">
+                                <option value="" {% if not current_user.military_branch %}selected{% endif %}>Select branch...</option>
+                                <option value="Army" {% if current_user.military_branch == "Army" %}selected{% endif %}>Army</option>
+                                <option value="Navy" {% if current_user.military_branch == "Navy" %}selected{% endif %}>Navy</option>
+                                <option value="Air Force" {% if current_user.military_branch == "Air Force" %}selected{% endif %}>Air Force</option>
+                                <option value="Marine Corps" {% if current_user.military_branch == "Marine Corps" %}selected{% endif %}>Marine Corps</option>
+                                <option value="Coast Guard" {% if current_user.military_branch == "Coast Guard" %}selected{% endif %}>Coast Guard</option>
+                                <option value="Space Force" {% if current_user.military_branch == "Space Force" %}selected{% endif %}>Space Force</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="military_discharge_date" class="form-label">Discharge Date</label>
+                            <input type="date" class="form-control" id="military_discharge_date" name="military_discharge_date" value="{{ current_user.military_discharge_date }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="veteran_status" class="form-label">Veteran Status</label>
+                            <select class="form-select" id="veteran_status" name="veteran_status">
+                                <option value="" {% if not current_user.veteran_status %}selected{% endif %}>Select status...</option>
+                                <option value="Protected veteran" {% if current_user.veteran_status == "Protected veteran" %}selected{% endif %}>Protected veteran</option>
+                                <option value="Recently separated veteran" {% if current_user.veteran_status == "Recently separated veteran" %}selected{% endif %}>Recently separated veteran</option>
+                                <option value="Disabled veteran" {% if current_user.veteran_status == "Disabled veteran" %}selected{% endif %}>Disabled veteran</option>
+                                <option value="Not a protected veteran" {% if current_user.veteran_status == "Not a protected veteran" %}selected{% endif %}>Not a protected veteran</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Immigration Status</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="needs_sponsorship" name="needs_sponsorship" {% if current_user.needs_sponsorship %}checked{% endif %}>
+                            <label class="form-check-label" for="needs_sponsorship">I will require sponsorship now or in the future</label>
+                        </div>
+
+                        <div class="mt-3">
+                            <label for="visa_status" class="form-label">Current Visa Status (if applicable)</label>
+                            <select class="form-select" id="visa_status" name="visa_status">
+                                <option value="" {% if not current_user.visa_status %}selected{% endif %}>Not applicable</option>
+                                <option value="F-1 Student" {% if current_user.visa_status == "F-1 Student" %}selected{% endif %}>F-1 Student</option>
+                                <option value="F-1 OPT" {% if current_user.visa_status == "F-1 OPT" %}selected{% endif %}>F-1 OPT</option>
+                                <option value="F-1 STEM OPT" {% if current_user.visa_status == "F-1 STEM OPT" %}selected{% endif %}>F-1 STEM OPT</option>
+                                <option value="H-1B" {% if current_user.visa_status == "H-1B" %}selected{% endif %}>H-1B</option>
+                                <option value="H-4 EAD" {% if current_user.visa_status == "H-4 EAD" %}selected{% endif %}>H-4 EAD</option>
+                                <option value="L-1" {% if current_user.visa_status == "L-1" %}selected{% endif %}>L-1</option>
+                                <option value="J-1" {% if current_user.visa_status == "J-1" %}selected{% endif %}>J-1</option>
+                                <option value="TN" {% if current_user.visa_status == "TN" %}selected{% endif %}>TN</option>
+                                <option value="Other" {% if current_user.visa_status and current_user.visa_status not in ["F-1 Student", "F-1 OPT", "F-1 STEM OPT", "H-1B", "H-4 EAD", "L-1", "J-1", "TN"] %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 col-md-6 mx-auto mb-4">
+                <button type="submit" class="btn btn-primary btn-lg">Save Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize form with existing data
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle between view and edit modes
+        const profileView = document.getElementById('profile-view');
+        const profileEdit = document.getElementById('profile-edit');
+        const btnEditProfile = document.getElementById('btn-edit-profile');
+        
+        // Add edit button functionality
+        btnEditProfile.addEventListener('click', function() {
+            profileView.style.display = 'none';
+            profileEdit.style.display = 'block';
+        });
+        
+        // Add a cancel button to the edit form
+        const submitButton = document.querySelector('#profile-edit button[type="submit"]');
+        const cancelButton = document.createElement('button');
+        cancelButton.id = 'btn-cancel-edit';
+        cancelButton.type = 'button';
+        cancelButton.className = 'btn btn-secondary btn-lg ms-2';
+        cancelButton.textContent = 'Cancel';
+        submitButton.parentNode.insertBefore(cancelButton, submitButton.nextSibling);
+        
+        cancelButton.addEventListener('click', function() {
+            profileEdit.style.display = 'none';
+            profileView.style.display = 'block';
+        });
+        
+        // Handle resume file upload and preview
+        const resumeFileInput = document.getElementById('user-resume-file');
+        if (resumeFileInput) {
             resumeFileInput.addEventListener('change', function() {
                 const file = resumeFileInput.files[0];
                 if (!file) return;
@@ -367,429 +662,33 @@
                     return;
                 }
                 
-                // Show progress bar
+                const uploadProgress = document.querySelector('.upload-progress');
+                const progressBar = document.getElementById('upload-progress-bar');
+                const uploadStatus = document.getElementById('upload-status');
+                
+                // Show progress elements
                 uploadProgress.style.display = 'block';
                 uploadStatus.style.display = 'block';
                 uploadStatus.textContent = 'Reading file...';
                 
-                const reader = new FileReader();
-                
-                reader.onprogress = function(e) {
-                    if (e.lengthComputable) {
-                        const percentLoaded = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = percentLoaded + '%';
-                        uploadStatus.textContent = `Reading file... ${percentLoaded}%`;
-                    }
-                };
-                
-                reader.onload = function(e) {
-                    // For text files, show content directly
-                    if (file.type === 'text/plain') {
-                        resumeTextarea.value = e.target.result;
-                        uploadStatus.textContent = 'Text file loaded successfully.';
-                    } else {
-                        // For other files, store as base64 data URI
-                        const base64String = e.target.result;
-                        resumeFileInput.setAttribute('data-base64', base64String);
-                        uploadStatus.textContent = `${file.name} loaded successfully. File will be parsed on save.`;
-                        resumeTextarea.value = `[Resume will be extracted from: ${file.name}]`;
-                    }
-                };
-                
-                reader.onerror = function() {
-                    uploadStatus.textContent = 'Error reading file.';
-                };
-                
+                // For text files, show preview directly
                 if (file.type === 'text/plain') {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('user-resume').value = e.target.result;
+                        uploadStatus.textContent = 'Text file loaded successfully.';
+                    };
+                    reader.onerror = function() {
+                        uploadStatus.textContent = 'Error reading file.';
+                    };
                     reader.readAsText(file);
                 } else {
-                    reader.readAsDataURL(file);
+                    // For other files, just show filename
+                    uploadStatus.textContent = `${file.name} selected. File will be parsed on save.`;
                 }
             });
-        });
-        
-        function copyResumeText() {
-            const resumeText = document.getElementById('resume-content').innerText;
-            navigator.clipboard.writeText(resumeText)
-                .then(() => {
-                    alert('Resume copied to clipboard!');
-                })
-                .catch(err => {
-                    console.error('Failed to copy resume: ', err);
-                    alert('Failed to copy resume text.');
-                });
         }
-        
-        function downloadResumeText() {
-            const resumeText = document.getElementById('resume-content').innerText;
-            const blob = new Blob([resumeText], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'resume.txt';
-            document.body.appendChild(a);
-            a.click();
-            
-            // Clean up
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-    </script>
-</body>
-</html>
-{% extends "base.html" %}
 
-{% block title %}Complete Your Profile - InstantApply{% endblock %}
-
-{% block content %}
-<div class="container mt-4">
-    <h1>Complete Your Profile</h1>
-    <p class="lead">Provide additional details to enhance your job applications</p>
-
-    <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data">
-        {{ form.csrf_token }}
-
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4>Personal Information</h4>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Full Name</label>
-                    <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}" required>
-                </div>
-
-                <div class="mb-3">
-                    <label for="professional_summary" class="form-label">Professional Summary</label>
-                    <textarea class="form-control" id="professional_summary" name="professional_summary" rows="4">{{ current_user.professional_summary }}</textarea>
-                    <div class="form-text">Brief overview of your professional background, skills, and career objectives.</div>
-                </div>
-
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="willing_to_relocate" name="willing_to_relocate" {% if current_user.willing_to_relocate %}checked{% endif %}>
-                    <label class="form-check-label" for="willing_to_relocate">Willing to Relocate</label>
-                </div>
-
-                <div class="mb-3">
-                    <label for="authorization_status" class="form-label">Work Authorization Status</label>
-                    <select class="form-select" id="authorization_status" name="authorization_status">
-                        <option value="" {% if not current_user.authorization_status %}selected{% endif %}>Select status...</option>
-                        <option value="US Citizen" {% if current_user.authorization_status == "US Citizen" %}selected{% endif %}>US Citizen</option>
-                        <option value="Green Card Holder" {% if current_user.authorization_status == "Green Card Holder" %}selected{% endif %}>Green Card Holder</option>
-                        <option value="H1B Visa" {% if current_user.authorization_status == "H1B Visa" %}selected{% endif %}>H1B Visa</option>
-                        <option value="F1 OPT" {% if current_user.authorization_status == "F1 OPT" %}selected{% endif %}>F1 OPT</option>
-                        <option value="Other" {% if current_user.authorization_status and current_user.authorization_status not in ["US Citizen", "Green Card Holder", "H1B Visa", "F1 OPT"] %}selected{% endif %}>Other</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label for="desired_job_titles" class="form-label">Desired Job Titles</label>
-                    <div id="job-titles-container">
-                        <div class="input-group mb-2">
-                            <input type="text" class="form-control job-title" placeholder="e.g., Software Engineer">
-                            <button type="button" class="btn btn-outline-secondary remove-job-title">Remove</button>
-                        </div>
-                    </div>
-                    <button type="button" id="add-job-title" class="btn btn-secondary btn-sm mt-2">+ Add Another Title</button>
-                    <input type="hidden" name="desired_job_titles" id="desired_job_titles_json">
-                </div>
-
-                <div class="mb-3">
-                    <label for="linkedin_url" class="form-label">LinkedIn URL</label>
-                    <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{ current_user.linkedin_url }}">
-                </div>
-
-                <div class="mb-3">
-                    <label for="portfolio_links" class="form-label">Portfolio Links</label>
-                    <div id="portfolio-links-container">
-                        <div class="input-group mb-2">
-                            <input type="url" class="form-control portfolio-link" placeholder="https://github.com/yourusername">
-                            <button type="button" class="btn btn-outline-secondary remove-portfolio-link">Remove</button>
-                        </div>
-                    </div>
-                    <button type="button" id="add-portfolio-link" class="btn btn-secondary btn-sm mt-2">+ Add Another Link</button>
-                    <input type="hidden" name="portfolio_links" id="portfolio_links_json">
-                </div>
-            </div>
-        </div>
-
-        <!-- Demographic Information Section (New) -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4>Demographic Information</h4>
-                <small class="text-white-50">This information is optional and will only be used when specifically required by employers</small>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="race_ethnicity" class="form-label">Race/Ethnicity</label>
-                    <select class="form-select" id="race_ethnicity" name="race_ethnicity">
-                        <option value="" {% if not current_user.race_ethnicity %}selected{% endif %}>Prefer not to say</option>
-                        <option value="American Indian or Alaska Native" {% if current_user.race_ethnicity == "American Indian or Alaska Native" %}selected{% endif %}>American Indian or Alaska Native</option>
-                        <option value="Asian" {% if current_user.race_ethnicity == "Asian" %}selected{% endif %}>Asian</option>
-                        <option value="Black or African American" {% if current_user.race_ethnicity == "Black or African American" %}selected{% endif %}>Black or African American</option>
-                        <option value="Hispanic or Latino" {% if current_user.race_ethnicity == "Hispanic or Latino" %}selected{% endif %}>Hispanic or Latino</option>
-                        <option value="Native Hawaiian or Other Pacific Islander" {% if current_user.race_ethnicity == "Native Hawaiian or Other Pacific Islander" %}selected{% endif %}>Native Hawaiian or Other Pacific Islander</option>
-                        <option value="White" {% if current_user.race_ethnicity == "White" %}selected{% endif %}>White</option>
-                        <option value="Two or More Races" {% if current_user.race_ethnicity == "Two or More Races" %}selected{% endif %}>Two or More Races</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label for="gender" class="form-label">Gender</label>
-                    <select class="form-select" id="gender" name="gender">
-                        <option value="" {% if not current_user.gender %}selected{% endif %}>Prefer not to say</option>
-                        <option value="Male" {% if current_user.gender == "Male" %}selected{% endif %}>Male</option>
-                        <option value="Female" {% if current_user.gender == "Female" %}selected{% endif %}>Female</option>
-                        <option value="Non-binary" {% if current_user.gender == "Non-binary" %}selected{% endif %}>Non-binary</option>
-                        <option value="Other" {% if current_user.gender == "Other" %}selected{% endif %}>Other</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label for="graduation_date" class="form-label">Graduation Date</label>
-                    <input type="date" class="form-control" id="graduation_date" name="graduation_date" value="{{ current_user.graduation_date }}">
-                </div>
-
-                <div class="mb-3">
-                    <label for="disability_status" class="form-label">Disability Status</label>
-                    <select class="form-select" id="disability_status" name="disability_status">
-                        <option value="" {% if not current_user.disability_status %}selected{% endif %}>Prefer not to say</option>
-                        <option value="No disability" {% if current_user.disability_status == "No disability" %}selected{% endif %}>No disability</option>
-                        <option value="Person with a disability" {% if current_user.disability_status == "Person with a disability" %}selected{% endif %}>Person with a disability</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label for="military_status" class="form-label">Military Status</label>
-                    <select class="form-select" id="military_status" name="military_status" onchange="toggleMilitaryFields()">
-                        <option value="" {% if not current_user.military_status %}selected{% endif %}>Select status...</option>
-                        <option value="No Military Service" {% if current_user.military_status == "No Military Service" %}selected{% endif %}>No Military Service</option>
-                        <option value="Active Duty" {% if current_user.military_status == "Active Duty" %}selected{% endif %}>Active Duty</option>
-                        <option value="Veteran" {% if current_user.military_status == "Veteran" %}selected{% endif %}>Veteran</option>
-                        <option value="Reserves" {% if current_user.military_status == "Reserves" %}selected{% endif %}>Reserves</option>
-                    </select>
-                </div>
-
-                <div id="military-additional-fields" style="display: none;">
-                    <div class="mb-3">
-                        <label for="military_branch" class="form-label">Military Branch</label>
-                        <select class="form-select" id="military_branch" name="military_branch">
-                            <option value="" {% if not current_user.military_branch %}selected{% endif %}>Select branch...</option>
-                            <option value="Army" {% if current_user.military_branch == "Army" %}selected{% endif %}>Army</option>
-                            <option value="Navy" {% if current_user.military_branch == "Navy" %}selected{% endif %}>Navy</option>
-                            <option value="Air Force" {% if current_user.military_branch == "Air Force" %}selected{% endif %}>Air Force</option>
-                            <option value="Marine Corps" {% if current_user.military_branch == "Marine Corps" %}selected{% endif %}>Marine Corps</option>
-                            <option value="Coast Guard" {% if current_user.military_branch == "Coast Guard" %}selected{% endif %}>Coast Guard</option>
-                            <option value="Space Force" {% if current_user.military_branch == "Space Force" %}selected{% endif %}>Space Force</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="military_discharge_date" class="form-label">Discharge Date</label>
-                        <input type="date" class="form-control" id="military_discharge_date" name="military_discharge_date" value="{{ current_user.military_discharge_date }}">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="veteran_status" class="form-label">Veteran Status</label>
-                        <select class="form-select" id="veteran_status" name="veteran_status">
-                            <option value="" {% if not current_user.veteran_status %}selected{% endif %}>Select status...</option>
-                            <option value="Protected veteran" {% if current_user.veteran_status == "Protected veteran" %}selected{% endif %}>Protected veteran</option>
-                            <option value="Recently separated veteran" {% if current_user.veteran_status == "Recently separated veteran" %}selected{% endif %}>Recently separated veteran</option>
-                            <option value="Disabled veteran" {% if current_user.veteran_status == "Disabled veteran" %}selected{% endif %}>Disabled veteran</option>
-                            <option value="Not a protected veteran" {% if current_user.veteran_status == "Not a protected veteran" %}selected{% endif %}>Not a protected veteran</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Immigration Status</label>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="needs_sponsorship" name="needs_sponsorship" {% if current_user.needs_sponsorship %}checked{% endif %}>
-                        <label class="form-check-label" for="needs_sponsorship">I will require sponsorship now or in the future</label>
-                    </div>
-
-                    <div class="mt-3">
-                        <label for="visa_status" class="form-label">Current Visa Status (if applicable)</label>
-                        <select class="form-select" id="visa_status" name="visa_status">
-                            <option value="" {% if not current_user.visa_status %}selected{% endif %}>Not applicable</option>
-                            <option value="F-1 Student" {% if current_user.visa_status == "F-1 Student" %}selected{% endif %}>F-1 Student</option>
-                            <option value="F-1 OPT" {% if current_user.visa_status == "F-1 OPT" %}selected{% endif %}>F-1 OPT</option>
-                            <option value="F-1 STEM OPT" {% if current_user.visa_status == "F-1 STEM OPT" %}selected{% endif %}>F-1 STEM OPT</option>
-                            <option value="H-1B" {% if current_user.visa_status == "H-1B" %}selected{% endif %}>H-1B</option>
-                            <option value="H-4 EAD" {% if current_user.visa_status == "H-4 EAD" %}selected{% endif %}>H-4 EAD</option>
-                            <option value="L-1" {% if current_user.visa_status == "L-1" %}selected{% endif %}>L-1</option>
-                            <option value="J-1" {% if current_user.visa_status == "J-1" %}selected{% endif %}>J-1</option>
-                            <option value="TN" {% if current_user.visa_status == "TN" %}selected{% endif %}>TN</option>
-                            <option value="Other" {% if current_user.visa_status and current_user.visa_status not in ["F-1 Student", "F-1 OPT", "F-1 STEM OPT", "H-1B", "H-4 EAD", "L-1", "J-1", "TN"] %}selected{% endif %}>Other</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4>Work Preferences</h4>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="desired_salary_range" class="form-label">Desired Salary Range</label>
-                    <input type="text" class="form-control" id="desired_salary_range" name="desired_salary_range" placeholder="e.g., $80,000 - $100,000" value="{{ current_user.desired_salary_range }}">
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Work Mode Preference</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="work_mode_preference" id="remote" value="Remote" {% if current_user.work_mode_preference == "Remote" %}checked{% endif %}>
-                        <label class="form-check-label" for="remote">Remote</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="work_mode_preference" id="hybrid" value="Hybrid" {% if current_user.work_mode_preference == "Hybrid" %}checked{% endif %}>
-                        <label class="form-check-label" for="hybrid">Hybrid</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="work_mode_preference" id="in-office" value="In-Office" {% if current_user.work_mode_preference == "In-Office" %}checked{% endif %}>
-                        <label class="form-check-label" for="in-office">In-Office</label>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="available_start_date" class="form-label">Available Start Date</label>
-                    <input type="date" class="form-control" id="available_start_date" name="available_start_date" value="{{ current_user.available_start_date }}">
-                </div>
-
-                <div class="mb-3">
-                    <label for="preferred_company_type" class="form-label">Preferred Company Type</label>
-                    <select class="form-select" id="preferred_company_type" name="preferred_company_type">
-                        <option value="" {% if not current_user.preferred_company_type %}selected{% endif %}>Select preference...</option>
-                        <option value="Startup" {% if current_user.preferred_company_type == "Startup" %}selected{% endif %}>Startup</option>
-                        <option value="Small Business" {% if current_user.preferred_company_type == "Small Business" %}selected{% endif %}>Small Business</option>
-                        <option value="Mid-size Company" {% if current_user.preferred_company_type == "Mid-size Company" %}selected{% endif %}>Mid-size Company</option>
-                        <option value="Large Enterprise" {% if current_user.preferred_company_type == "Large Enterprise" %}selected{% endif %}>Large Enterprise</option>
-                        <option value="No Preference" {% if current_user.preferred_company_type == "No Preference" %}selected{% endif %}>No Preference</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4>Additional Qualifications</h4>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Certifications</label>
-                    <div id="certifications-container">
-                        <div class="certification-entry border rounded p-3 mb-3">
-                            <div class="mb-2">
-                                <label class="form-label">Certification Name</label>
-                                <input type="text" class="form-control cert-name" placeholder="e.g., AWS Solutions Architect">
-                            </div>
-                            <div class="row">
-                                <div class="col">
-                                    <label class="form-label">Issuing Organization</label>
-                                    <input type="text" class="form-control cert-org" placeholder="e.g., Amazon Web Services">
-                                </div>
-                                <div class="col">
-                                    <label class="form-label">Expiration Date</label>
-                                    <input type="date" class="form-control cert-expiry">
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-cert">Remove</button>
-                        </div>
-                    </div>
-                    <button type="button" id="add-certification" class="btn btn-secondary btn-sm">+ Add Certification</button>
-                    <input type="hidden" name="certifications" id="certifications_json">
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Languages</label>
-                    <div id="languages-container">
-                        <div class="language-entry row mb-2">
-                            <div class="col-md-6">
-                                <input type="text" class="form-control language-name" placeholder="Language">
-                            </div>
-                            <div class="col-md-4">
-                                <select class="form-select language-proficiency">
-                                    <option value="Native">Native</option>
-                                    <option value="Fluent">Fluent</option>
-                                    <option value="Advanced">Advanced</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Basic">Basic</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <button type="button" class="btn btn-outline-danger remove-language">Remove</button>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" id="add-language" class="btn btn-secondary btn-sm mt-2">+ Add Language</button>
-                    <input type="hidden" name="languages" id="languages_json">
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4>Application-Specific Questions</h4>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="career_goals" class="form-label">Career Goals</label>
-                    <textarea class="form-control" id="career_goals" name="career_goals" rows="3">{{ current_user.career_goals }}</textarea>
-                    <div class="form-text">Share your short and long-term career goals.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="biggest_achievement" class="form-label">Biggest Professional Achievement</label>
-                    <textarea class="form-control" id="biggest_achievement" name="biggest_achievement" rows="3">{{ current_user.biggest_achievement }}</textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label for="work_style" class="form-label">Work Style and Team Preferences</label>
-                    <textarea class="form-control" id="work_style" name="work_style" rows="3">{{ current_user.work_style }}</textarea>
-                    <div class="form-text">Describe your preferred work environment and collaboration style.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="industry_attraction" class="form-label">What Attracted You to This Industry/Field</label>
-                    <textarea class="form-control" id="industry_attraction" name="industry_attraction" rows="3">{{ current_user.industry_attraction }}</textarea>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4>Values</h4>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="applicant_values" class="form-label">Your Professional Values</label>
-                    <div id="values-container">
-                        <div class="input-group mb-2">
-                            <input type="text" class="form-control value-item" placeholder="e.g., Innovation">
-                            <button type="button" class="btn btn-outline-secondary remove-value">Remove</button>
-                        </div>
-                    </div>
-                    <button type="button" id="add-value" class="btn btn-secondary btn-sm mt-2">+ Add Another Value</button>
-                    <input type="hidden" name="applicant_values" id="applicant_values_json">
-                </div>
-            </div>
-        </div>
-
-        <div class="d-grid gap-2 col-md-6 mx-auto mb-4">
-            <button type="submit" class="btn btn-primary btn-lg">Save Profile</button>
-        </div>
-    </form>
-</div>
-
-{% endblock %}
-
-{% block scripts %}
-<script>
-    // Initialize form with existing data
-    document.addEventListener('DOMContentLoaded', function() {
         // Job Titles
         try {
             const jobTitles = {{ current_user.desired_job_titles|tojson|safe if current_user.desired_job_titles else '[]' }};
@@ -863,6 +762,35 @@
         // Check military status on page load to show/hide additional fields
         toggleMilitaryFields();
     });
+
+    // Copy and download resume functionality
+    function copyResumeText() {
+        const resumeText = document.getElementById('resume-content').innerText;
+        navigator.clipboard.writeText(resumeText)
+            .then(() => {
+                alert('Resume text copied to clipboard!');
+            })
+            .catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy resume text.');
+            });
+    }
+
+    function downloadResumeText() {
+        const resumeText = document.getElementById('resume-content').innerText;
+        const blob = new Blob([resumeText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'resume.txt';
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 
     // Toggle military fields based on selection
     function toggleMilitaryFields() {
