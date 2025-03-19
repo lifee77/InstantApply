@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app, send_file
+from flask import Blueprint, request, jsonify, current_app, send_file, send_from_directory, abort
 from flask_login import login_required, current_user
 # Update import to use the new job_search module
 from utils.job_search.job_search import search_jobs
@@ -105,26 +105,19 @@ def update_user():
 @api_bp.route('/user/resume', methods=['GET'])
 @login_required
 def download_resume():
-    """Download the user's original resume file"""
+    """Download the user's original resume file."""
     if not current_user.resume_file_path or not os.path.exists(current_user.resume_file_path):
-        return jsonify({'error': 'Resume file not found'}), 404
+        abort(404, "No resume file available")
     
-    try:
-        # Determine the content type
-        content_type = current_user.resume_mime_type or 'application/octet-stream'
-        
-        # Get the original filename or use a default
-        filename = current_user.resume_filename or 'resume.pdf'
-        
-        return send_file(
-            current_user.resume_file_path,
-            mimetype=content_type,
-            as_attachment=True,
-            download_name=filename
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error downloading resume: {str(e)}")
-        return jsonify({'error': f'Error downloading resume: {str(e)}'}), 500
+    directory = os.path.dirname(current_user.resume_file_path)
+    filename = os.path.basename(current_user.resume_file_path)
+    
+    return send_from_directory(
+        directory, 
+        filename,
+        as_attachment=True,
+        attachment_filename=current_user.resume_filename or filename
+    )
 
 @api_bp.route('/user/<int:user_id>', methods=['GET'])
 @login_required

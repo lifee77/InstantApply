@@ -5,32 +5,56 @@
 }
 
 .profile-view h3 {
-    color: #0066cc;
+    color: #004080; /* Darker blue for better contrast */
     margin-top: 20px;
     margin-bottom: 10px;
     border-bottom: 1px solid #eee;
     padding-bottom: 5px;
+    font-weight: 600; /* Make headers bolder */
 }
 
 .profile-view p {
-    margin: 5px 0;
+    margin: 8px 0; /* Increased margin for better spacing */
+    line-height: 1.5; /* Improved line height */
 }
 
 .profile-view .resume-text {
     white-space: pre-wrap;
     background-color: #f9f9f9;
     padding: 15px;
-    border: 1px solid #eee;
+    border: 1px solid #ddd; /* Slightly darker border */
     border-radius: 4px;
     max-height: 400px;
     overflow-y: auto;
     font-family: 'Courier New', monospace;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6; /* Improved line height */
+    color: #333; /* Darker text color */
 }
 
 .edit-form {
     display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.edit-form .form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.edit-form .form-control {
+    margin-bottom: 0.5rem;
+}
+
+.edit-form textarea {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
 }
 
 .profile-actions {
@@ -76,8 +100,17 @@
 .upload-status {
     font-size: 12px;
     margin-top: 5px;
-    color: #6c757d;
+    color: #333; /* Darker text for better visibility */
     display: none;
+    transition: all 0.3s ease;
+}
+
+.upload-status.success {
+    color: #28a745;
+}
+
+.upload-status.error {
+    color: #dc3545;
 }
 
 /* Icon styles */
@@ -132,4 +165,8 @@
     .btn-download-original {
         margin-top: 8px;
     }
+}
+
+.card-header h3, .card-header h4 {
+    color: white !important; /* Ensure headers in card headers are white */
 }
