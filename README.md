@@ -21,8 +21,8 @@ chmod +x setup_dependencies.sh
 ./setup_dependencies.sh
 
 # Create and activate a virtual environment
-python -m venv myenv
-source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+python3.11 -m venv venv
+source venv/bin/activate  # On Windows: myenv\Scripts\activate
 
 # Install Python packages
 pip install -r requirements.txt
