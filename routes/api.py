@@ -1,8 +1,9 @@
-from flask import Blueprint, request, jsonify, current_app, send_file, send_from_directory, abort
+from flask import Blueprint, request, jsonify, current_app, render_template, send_file, send_from_directory, abort
+from utils.application_filler import valid_url
 from flask_login import login_required, current_user
 # Update import to use the new job_search module
 from utils.job_search.job_search import search_jobs
-from utils.application_filler import generate_application_responses, fill_application_form_async
+from utils.application_filler import generate_application_responses
 from utils.job_search.job_submitter import submit_application
 from utils.document_parser import parse_and_save_resume, get_resume_file
 from models.user import User, db
@@ -13,8 +14,35 @@ from utils.job_recommender import search_and_save_jobs_for_current_user
 import os
 import json
 import asyncio
+import asyncio
+from flask import current_app
+from flask_login import login_required, current_user
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+
+@api_bp.route('/auto-apply', methods=['POST'])
+@login_required
+def trigger_auto_apply():
+    """
+    API Endpoint to trigger the auto-apply process.
+    This route will fetch the current user's job recommendations,
+    automatically fill and submit the applications, and mark them as applied.
+    """
+    user_id = current_user.id
+    from application_filler.runner_service import auto_apply_jobs_for_user
+
+    try:
+        # Create a new event loop to run the async function
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(auto_apply_jobs_for_user(user_id))
+        loop.close()
+        return jsonify({'message': 'Auto-apply triggered successfully!'}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error in auto-apply: {str(e)}")
+        return jsonify({'error': 'Auto-apply failed'}), 500
+
 
 @api_bp.route('/recommendations', methods=['POST'])
 @login_required
@@ -97,6 +125,10 @@ def search():
             job_url = job.get('url', '').strip()
             if not job_url:
                 continue
+            # Validate job URL before saving it
+    #        if not valid_url(job_url):
+   #             current_app.logger.warning(f"Skipping job with invalid URL: {job_url}")
+   #             continue
 
             existing = JobRecommendation.query.filter_by(
                 user_id=current_user.id,
@@ -164,35 +196,57 @@ def search_and_recommend():
 @login_required
 def apply():
     data = request.json
-    job_id = data.get('job_id')
+    job_url = data.get('job_url')
     
-    if not job_id:
-        return jsonify({'error': 'Job ID is required'}), 400
+    if not job_url:
+        return jsonify({'error': 'Job URL is required'}), 400
     
     # Use current_user instead of querying by user_id
     user = current_user
     
-    # Generate responses for application questions
-    application_responses = generate_application_responses(job_id, user)
+    from utils.application_filler import ApplicationFiller
+    # Instantiate the ApplicationFiller class
+    app_filler = ApplicationFiller(user, job_url=job_url)
     
-    # Submit the application
-    result = submit_application(job_id, user, application_responses)
+    # Create the Playwright page object and fill the application form
+    from playwright.async_api import async_playwright
+    async def fill_application():
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            context = await browser.new_context()
+            page = await context.new_page()
+            try:
+                await app_filler.fill_application(page)
+            finally:
+                await browser.close()
     
-    # Log application in database if successful
-    if result['success']:
-        application = Application(
-            user_id=user.id,
-            job_id=job_id,
-            company=data.get('company', 'Unknown'),
-            position=data.get('title', 'Unknown'),
-            status='Submitted',
-            response_data=str(application_responses)
-        )
-        db.session.add(application)
-        db.session.commit()
-        result['application_id'] = application.id
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(fill_application())
+        loop.close()
     
-    return jsonify(result)
+        # After successful form filling, generate responses and submit the application
+        application_responses = generate_application_responses(job_url, user)
+        result = submit_application(job_url, user, application_responses)
+    
+        if result['success']:
+            application = Application(
+                user_id=user.id,
+                job_id=data.get('job_id'),
+                company=data.get('company', 'Unknown'),
+                position=data.get('title', 'Unknown'),
+                status='Submitted',
+                response_data=str(application_responses)
+            )
+            db.session.add(application)
+            db.session.commit()
+            result['application_id'] = application.id
+    
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"Application process failed: {str(e)}")
+        return jsonify({'error': 'Failed to apply'}), 500
 
 @api_bp.route('/user', methods=['POST'])
 @login_required
@@ -263,6 +317,58 @@ def get_user(user_id):
         
     return jsonify(current_user.to_dict())
 
+@api_bp.route('/auto-apply-pending', methods=['POST'])
+@login_required
+def auto_apply_pending():
+    """
+    Automatically apply to all pending job recommendations (applied=False)
+    """
+    pending_jobs = JobRecommendation.query.filter_by(user_id=current_user.id, applied=False).all()
+    if not pending_jobs:
+        return jsonify({'message': 'No pending jobs found'}), 200
+
+    from utils.application_filler import ApplicationFiller
+    from playwright.async_api import async_playwright
+
+    async def fill_job_application(job_url, user):
+        app_filler = ApplicationFiller(user, job_url=job_url)
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            context = await browser.new_context()
+            page = await context.new_page()
+            try:
+                await app_filler.fill_application(page)
+            finally:
+                await browser.close()
+
+    tasks = []
+    for job in pending_jobs:
+        job_url = job.url
+        tasks.append(fill_job_application(job_url, current_user))
+        job.applied = True  # Mark as applied optimistically before running automation
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(asyncio.gather(*tasks))
+        loop.close()
+        db.session.commit()
+        return jsonify({'message': f'Attempted to apply to {len(tasks)} jobs'}), 200
+    except Exception as e:
+        current_app.logger.error(f"Auto apply failed: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to auto apply'}), 500
+
+def extract_job_id_from_url(url):
+    """
+    Extracts the Indeed job ID from a URL, fallback to None if not found
+    """
+    import re
+    match = re.search(r'jk=([a-zA-Z0-9]+)', url)
+    if match:
+        return match.group(1)
+    return None
+
 @api_bp.route('/applications/<int:user_id>', methods=['GET'])
 @login_required
 def get_applications(user_id):
@@ -272,3 +378,44 @@ def get_applications(user_id):
         
     applications = Application.query.filter_by(user_id=user_id).all()
     return jsonify([app.to_dict() for app in applications])
+
+@api_bp.route('/apply-page', methods=['GET'])
+@login_required
+def apply_page():
+    return '''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Apply for Jobs</title>
+    </head>
+    <body>
+        <h1>Apply to Jobs</h1>
+        <button id="applyBtn">Apply to All Pending Jobs</button>
+
+        <script>
+            document.getElementById("applyBtn").addEventListener("click", function() {
+                // Call the new auto-apply endpoint which triggers the runner service
+                fetch('/api/auto-apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.message) {
+                        alert(data.message);
+                    } else if(data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        alert('Unexpected response.');
+                    }
+                })
+                .catch(error => {
+                    alert('Error during auto-apply: ' + error);
+                });
+            });
+        </script>
+    </body>
+    </html>
+    '''

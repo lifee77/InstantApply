@@ -27,7 +27,6 @@ from models.job_recommendation import JobRecommendation
 from routes.profile import profile_bp
 from routes.api import api_bp
 from routes.auth import auth_bp
-from utils.application_filler import fill_application_form_async
 
 # Load environment variables
 load_dotenv()
