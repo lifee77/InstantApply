@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - InstantApply</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-
 </head>
 <body>
     <header>
@@ -27,39 +25,7 @@
             <p>Your job search assistant powered by AI</p>
         </section>
 
-        <section class="search-section">
-            <h3>Find Jobs</h3>
-                <form id="job-search-form" action="#" method="GET" class="job-search-form">
-                <div class="form-group">
-                    <label for="job-title">Job Title</label>
-                    <input type="text" id="job-title" name="title" placeholder="Software Engineer, Project Manager, etc." required>
-                </div>
-                <div class="form-group">
-                    <label for="location">Location</label>
-                    <input type="text" id="location" name="location" placeholder="City, State, or Remote">
-                </div>
-                <button type="submit" class="search-button">Search Jobs</button>
-                </form>
-                <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const form = document.getElementById('job-search-form');
-                    form.addEventListener('submit', function(e) {
-                        e.preventDefault();
-                        const jobTitle = document.getElementById('job-title').value;
-                        const location = document.getElementById('location').value;
-
-                        fetch('/api/search', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ job_title: jobTitle, location: location })
-                        })
-                        .then(response => response.json())
-                        .then(data => console.log('Found Jobs:', data))
-                        .catch(err => console.error('Error during job search:', err));
-                    });
-                });
-                </script>
-        </section>
+        <!-- Single job search section -->
         <section class="search-section">
             <h3>Find Jobs</h3>
             <form id="job-search-form" action="#" method="GET" class="job-search-form">
@@ -120,6 +86,9 @@
     <footer>
         <p>&copy; 2023 InstantApply</p>
     </footer>
+    
+    <!-- Load dashboard JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
     
     <style>
         .welcome-section {
