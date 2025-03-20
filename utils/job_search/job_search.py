@@ -121,7 +121,7 @@ def search_jobs_mock(job_title: str, location: str) -> List[Dict[str, Any]]:
     
     return mock_jobs
 
-def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
+def search_jobs_api(job_title: str, location: str, page: int = 1) -> List[Dict[str, Any]]:   
     """
     Search for jobs using a public jobs API (Jsearch API from RapidAPI)
     
@@ -133,6 +133,7 @@ def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
         List of job dictionaries containing job details
     """
     # Get API key and log what we found (for debugging)
+    
     api_key = os.environ.get('RAPID_API_KEY', '')
     
     if api_key:
@@ -151,7 +152,7 @@ def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
         
         querystring = {
             "query": f"{job_title} in {location}",
-            "page": "1",
+            "page": str(page),
             "num_pages": "1"
         }
         
@@ -217,6 +218,8 @@ def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
             
             if api_jobs:
                 logger.info(f"Found {len(api_jobs)} jobs via API")
+                for job in api_jobs:
+                    logger.info(f"Job: {job['title']} at {job['company']} ({job['location']}) - {job['url']}")
                 return api_jobs
             else:
                 logger.warning("API returned data but no valid jobs were found")
@@ -232,7 +235,9 @@ def search_jobs_api(job_title: str, location: str) -> List[Dict[str, Any]]:
         logger.error(traceback.format_exc())
         return search_jobs_mock(job_title, location)
 
-def search_jobs(job_title: str, location: str) -> List[Dict[str, Any]]:
+
+
+def search_jobs(job_title: str, location: str, page: int = 1) -> List[Dict[str, Any]]:
     """
     Main job search function that tries available methods
     
@@ -246,14 +251,13 @@ def search_jobs(job_title: str, location: str) -> List[Dict[str, Any]]:
     logger.info(f"Searching for jobs: {job_title} in {location}")
     
     # Try API search first
+    logger.info(f"Searching for jobs: {job_title} in {location} (Page {page})")
     try:
-        jobs = search_jobs_api(job_title, location)
+        jobs = search_jobs_api(job_title, location, page)
         if jobs:
             return jobs
     except Exception as e:
         logger.error(f"API search failed: {str(e)}")
-    
-    # If API search fails, use mock data as fallback
     return search_jobs_mock(job_title, location)
 
 def save_test_data():

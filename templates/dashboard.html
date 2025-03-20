@@ -26,7 +26,7 @@
 
         <section class="search-section">
             <h3>Find Jobs</h3>
-            <form action="/search" method="GET" class="job-search-form">
+                <form id="job-search-form" action="#" method="GET" class="job-search-form">
                 <div class="form-group">
                     <label for="job-title">Job Title</label>
                     <input type="text" id="job-title" name="title" placeholder="Software Engineer, Project Manager, etc." required>
@@ -36,7 +36,26 @@
                     <input type="text" id="location" name="location" placeholder="City, State, or Remote">
                 </div>
                 <button type="submit" class="search-button">Search Jobs</button>
-            </form>
+                </form>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const form = document.getElementById('job-search-form');
+                    form.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const jobTitle = document.getElementById('job-title').value;
+                        const location = document.getElementById('location').value;
+
+                        fetch('/api/search', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ job_title: jobTitle, location: location })
+                        })
+                        .then(response => response.json())
+                        .then(data => console.log('Found Jobs:', data))
+                        .catch(err => console.error('Error during job search:', err));
+                    });
+                });
+                </script>
         </section>
 
         <section class="dashboard-stats">

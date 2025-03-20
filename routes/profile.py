@@ -157,22 +157,35 @@ def extract_text_from_resume(file_path):
 
 
 def process_resume_file(file):
-    """Process an uploaded resume file."""
+    """Process an uploaded resume file, extract text, and auto-fill fields."""
+    from utils.document_parser import parse_resume_with_spacy  # import inside function to avoid circular imports
+    
     filename = secure_filename(file.filename)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_filename = f"{timestamp}_{filename}"
-    
+
     # Ensure upload folder exists
     upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
     os.makedirs(upload_folder, exist_ok=True)
-    
+
     file_path = os.path.join(upload_folder, unique_filename)
     file.save(file_path)
-    
+
     # Extract text from the file
-    try:
-        resume_text = extract_text_from_resume(file_path)
-        return file_path, filename, resume_text
-    except Exception as e:
-        current_app.logger.error(f"Error extracting text from resume: {str(e)}")
-        return file_path, filename, f"Error extracting text: {str(e)}"
+    resume_text = extract_text_from_resume(file_path)
+    
+    # Parse resume to auto-fill user profile fields
+    parsed_data = parse_resume_with_spacy(resume_text)
+    current_app.logger.info(f"Auto-filled data: {parsed_data}")
+
+    # Auto-fill fields into current_user
+    if parsed_data.get("name"):
+        current_user.name = parsed_data["name"]
+    if parsed_data.get("linkedin"):
+        current_user.linkedin_url = parsed_data["linkedin"]
+    if parsed_data.get("skills"):
+        current_user.skills = json.dumps(parsed_data["skills"])
+    if parsed_data.get("experience"):
+        current_user.experience = json.dumps(parsed_data["experience"])
+
+    return file_path, filename, resume_text

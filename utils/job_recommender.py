@@ -6,6 +6,9 @@ import time
 import sys
 from typing import List, Dict, Any
 from dotenv import load_dotenv
+from models.job_recommendation import JobRecommendation
+from flask_login import current_user
+from models.user import db
 
 # Add the project root to the Python path when running standalone
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -437,6 +440,55 @@ def recommend_jobs_for_user_id(user_id: int, job_title: str = None, location: st
     except ImportError:
         logger.error("Flask app context not available. This function must be called within a Flask application.")
         return []
+    
+def search_and_save_jobs_for_current_user(limit=10):
+    user = current_user
+
+    # Step 1: Extract preferences
+    job_titles = user.desired_job_titles if user.desired_job_titles else []
+    if not job_titles and user.skills:
+        try:
+            job_titles = json.loads(user.skills)
+        except json.JSONDecodeError:
+            job_titles = [skill.strip() for skill in user.skills.split(",")]
+
+    if not job_titles:
+        job_titles = ["Software Engineer"]
+
+    work_mode = user.work_mode_preference or "Remote"
+    location = "Remote" if "remote" in work_mode.lower() else "On-site"
+
+    saved_count = 0
+
+    # Step 2: Search and Save
+    for job_title in job_titles:
+        jobs = search_jobs(job_title, location)
+
+        for job in jobs:
+            # Prevent duplicates
+            exists = JobRecommendation.query.filter_by(user_id=user.id, url=job['url']).first()
+            if exists:
+                continue
+
+            recommendation = JobRecommendation(
+                user_id=user.id,
+                job_title=job.get('title'),
+                company=job.get('company'),
+                location=job.get('location'),
+                url=job.get('url'),
+                match_score=job.get('match_score', 0)
+            )
+            db.session.add(recommendation)
+            saved_count += 1
+
+            if saved_count >= limit:
+                break
+
+        if saved_count >= limit:
+            break
+
+    db.session.commit()
+    logger.info(f"Saved {saved_count} job recommendations for {user.name}")
 
 if __name__ == "__main__":
     # Example usage as a standalone script

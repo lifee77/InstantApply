@@ -23,6 +23,11 @@
             <h2>My Applications</h2>
             <p>Track the status of your submitted applications</p>
             
+            <div style="margin-bottom: 20px;">
+                <button id="search-jobs-btn">Search Jobs</button>
+                <button id="find-jobs-btn">Find Jobs</button>
+            </div>
+            
             <div id="applications-container">
                 <p>Loading your applications...</p>
             </div>
@@ -37,7 +42,33 @@
         document.addEventListener('DOMContentLoaded', function() {
             const userId = {{ current_user.id }};
             const applicationsContainer = document.getElementById('applications-container');
+
+            document.getElementById('search-jobs-btn').addEventListener('click', function() {
+                fetch('/api/search', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ job_title: "Software Engineer", location: "Remote" })
+                })
+                    .then(response => response.json())
+                    .then(data => console.log('Found Jobs:', data))
+                    .catch(err => console.error('Error during job search:', err));
+            });
             
+            const findJobsButton = document.getElementById('find-jobs-btn');
+            if (findJobsButton) {
+                findJobsButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    fetch('/api/search', { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ job_title: "Software Engineer", location: "Remote" })
+                    })
+                    .then(response => response.json())
+                    .then(data => console.log('Homepage Found Jobs:', data))
+                    .catch(err => console.error('Error on homepage search:', err));
+                });
+            }
+
             fetch(`/api/applications/${userId}`)
                 .then(response => {
                     if (!response.ok) {
