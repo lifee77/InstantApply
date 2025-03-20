@@ -81,6 +81,9 @@ def create_app():
     
     return app
 
+# This app instance can be accessed by both `flask run` and `gunicorn`
+app = create_app()
+
 # This allows you to run the app directly with `python app.py`
 if __name__ == '__main__':
-    app = create_app()
+    app.run(debug=True)
