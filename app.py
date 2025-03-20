@@ -52,7 +52,7 @@ def create_app():
     # Setup login manager
     login_manager = LoginManager()
     login_manager.init_app(app)
-    login_manager.login_view = 'login'
+    login_manager.login_view = 'auth.login'
     
     # Register blueprints
     app.register_blueprint(profile_bp)

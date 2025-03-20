@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import asyncio
 import random
 from playwright.async_api import Page
+from application_filler.utils.click_utils import click_accept_or_apply_buttons
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +155,12 @@ class BaseApplicationFiller(abc.ABC):
             tag_name = await field_element.evaluate("el => el.tagName.toLowerCase()")
             element_type = await field_element.get_attribute("type") or ""
             
+            # Scroll field into view before focusing
+            await page.evaluate("el => el.scrollIntoView({behavior: 'smooth', block: 'center'})", field_element)
             # Apply human-like behavior: focus on the field first
             await field_element.focus()
+            # Highlight the field for visual feedback
+            await page.evaluate("(el) => { el.style.border = '2px solid green'; el.style.backgroundColor = '#e0ffe0'; }", field_element)
             await asyncio.sleep(random.uniform(0.2, 0.5))
             
             # Process based on element type
@@ -279,7 +284,7 @@ class BaseApplicationFiller(abc.ABC):
         except Exception as e:
             logger.error(f"Error uploading resume: {str(e)}")
             return False
-    
+
     @abc.abstractmethod
     async def fill_application_form(self, page: Page) -> bool:
         """
