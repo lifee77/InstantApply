@@ -126,3 +126,67 @@ def generate_application_responses(job_id: str, user: User) -> Dict[str, Any]:
     responses = {question["text"]: "Dummy response" for question in questions}
     
     return responses
+
+async def fill_application_form_async(job_id: str, user: User):
+    """
+    Fill the job application form using Playwright and user profile data.
+    
+    Args:
+        job_id: The Indeed job ID.
+        user: User object with profile data.
+    """
+    from playwright.async_api import async_playwright
+
+    logger.info(f"Starting form fill for job_id: {job_id} using user: {user.email}")
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto(f"https://www.indeed.com/viewjob?jk={job_id}&apply=1", timeout=30000)
+
+        # Fill common fields using user profile data
+        try:
+            await page.fill('input[name="name"]', user.name)
+            await page.fill('input[name="email"]', user.email)
+            # Additional fields can be filled similarly
+            if hasattr(user, 'phone'):
+                await page.fill('input[name="phone"]', user.phone)
+            if user.resume_file_path and os.path.exists(user.resume_file_path):
+                file_input = await page.query_selector('input[type="file"]')
+                if file_input:
+                    await file_input.set_input_files(user.resume_file_path)
+                    logger.info("Uploaded resume file.")
+        except Exception as e:
+            logger.error(f"Error filling common fields: {str(e)}")
+
+        # Extract application questions and fill responses dynamically
+        try:
+            questions = await extract_application_questions_async(job_id, user)
+            for question in questions:
+                q_text = question["text"]
+                # Determine selector based on question text (heuristic)
+                selector = f'input[placeholder*="{q_text}"], textarea[placeholder*="{q_text}"]'
+                response = ""
+                q_lower = q_text.lower()
+                if "strength" in q_lower:
+                    response = user.biggest_achievement or ""
+                elif "work" in q_lower:
+                    response = user.career_goals or ""
+                elif "experience" in q_lower:
+                    response = user.experience or ""
+                elif "skill" in q_lower:
+                    response = user.skills or ""
+                else:
+                    response = ""
+                if response:
+                    try:
+                        await page.fill(selector, response)
+                        logger.info(f"Filled field for question '{q_text}' with response from user profile.")
+                    except Exception as e:
+                        logger.warning(f"Could not fill field for question '{q_text}': {str(e)}")
+        except Exception as e:
+            logger.error(f"Error extracting or filling application questions: {str(e)}")
+
+        # Close the browser after form interaction
+        await browser.close()
+        logger.info("Form filling complete and browser closed.")

@@ -24,6 +24,7 @@ from models.user import db, User
 from models.application import Application
 from routes.profile import profile_bp
 from routes.api import api_bp
+from routes.auth import auth_bp
 
 # Load environment variables
 load_dotenv()
@@ -53,7 +54,9 @@ def create_app():
     # Register blueprints
     app.register_blueprint(profile_bp)
     app.register_blueprint(api_bp)
-    
+    app.register_blueprint(auth_bp)
+
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))

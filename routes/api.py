@@ -7,10 +7,69 @@ from utils.job_search.job_submitter import submit_application
 from utils.document_parser import parse_and_save_resume, get_resume_file
 from models.user import User, db
 from models.application import Application
+from utils.job_recommender import search_and_save_jobs_for_current_user
 import os
 import json
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+@api_bp.route('/recommendations', methods=['POST'])
+@login_required
+def generate_recommendations():
+    """
+    Trigger job search and save recommendations for the current user.
+    """
+    try:
+        search_and_save_jobs_for_current_user(limit=10)  # You can adjust limit if needed
+        return jsonify({'message': 'Job recommendations have been saved successfully'}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error generating recommendations: {str(e)}")
+        return jsonify({'error': 'Failed to generate recommendations'}), 500
+
+
+@api_bp.route('/recommendations', methods=['GET'])
+@login_required
+def get_user_recommendations():
+    """
+    Return all job recommendations for the current user.
+    """
+    try:
+        recommendations = JobRecommendation.query.filter_by(user_id=current_user.id).all()
+        return jsonify([
+            {
+                'id': rec.id,
+                'job_title': rec.job_title,
+                'company': rec.company,
+                'location': rec.location,
+                'url': rec.url,
+                'match_score': rec.match_score,
+                'applied': rec.applied,
+                'recommended_at': rec.recommended_at.isoformat()
+            } for rec in recommendations
+        ])
+    except Exception as e:
+        current_app.logger.error(f"Error fetching recommendations: {str(e)}")
+        return jsonify({'error': 'Could not fetch recommendations'}), 500
+    
+@api_bp.route('/recommendations/<int:recommendation_id>', methods=['PATCH'])
+@login_required
+def update_applied_status(recommendation_id):
+    """
+    Mark a job recommendation as applied or not applied.
+    """
+    data = request.json
+    applied_status = data.get('applied')
+
+    if applied_status is None:
+        return jsonify({'error': 'Applied status is required'}), 400
+
+    rec = JobRecommendation.query.filter_by(id=recommendation_id, user_id=current_user.id).first()
+    if not rec:
+        return jsonify({'error': 'Recommendation not found'}), 404
+
+    rec.applied = bool(applied_status)
+    db.session.commit()
+    return jsonify({'message': 'Recommendation updated', 'applied': rec.applied})
 
 @api_bp.route('/search', methods=['POST'])
 def search():
