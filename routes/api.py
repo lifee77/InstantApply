@@ -2,14 +2,17 @@ from flask import Blueprint, request, jsonify, current_app, send_file, send_from
 from flask_login import login_required, current_user
 # Update import to use the new job_search module
 from utils.job_search.job_search import search_jobs
-from utils.application_filler import generate_application_responses
+from utils.application_filler import generate_application_responses, fill_application_form_async
 from utils.job_search.job_submitter import submit_application
 from utils.document_parser import parse_and_save_resume, get_resume_file
 from models.user import User, db
 from models.application import Application
+from models.job_recommendation import JobRecommendation
+from datetime import datetime
 from utils.job_recommender import search_and_save_jobs_for_current_user
 import os
 import json
+import asyncio
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -72,6 +75,7 @@ def update_applied_status(recommendation_id):
     return jsonify({'message': 'Recommendation updated', 'applied': rec.applied})
 
 @api_bp.route('/search', methods=['POST'])
+@login_required
 def search():
     data = request.json
     job_title = data.get('job_title')
@@ -80,9 +84,81 @@ def search():
     if not job_title or not location:
         return jsonify({'error': 'Job title and location are required'}), 400
     
-    # Use the new job search function
     jobs = search_jobs(job_title, location)
-    return jsonify({'jobs': jobs})
+    saved_jobs = []
+    max_retries = 5
+    retries = 0
+
+    while len(saved_jobs) < 10 and retries < max_retries:
+        retries += 1
+        jobs = search_jobs(job_title, location, page=retries)
+
+        for job in jobs:
+            job_url = job.get('url', '').strip()
+            if not job_url:
+                continue
+
+            existing = JobRecommendation.query.filter_by(
+                user_id=current_user.id,
+                url=job_url
+            ).first()
+            if existing:
+                continue
+
+            recommendation = JobRecommendation(
+                user_id=current_user.id,
+                job_title=job.get('title', ''),
+                company=job.get('company', ''),
+                location=job.get('location', ''),
+                url=job_url,
+                applied=False,
+                match_score=0,
+                recommended_at=datetime.utcnow()
+            )
+            db.session.add(recommendation)
+            saved_jobs.append({
+                'title': recommendation.job_title,
+                'company': recommendation.company,
+                'location': recommendation.location,
+                'url': recommendation.url,
+                'applied': recommendation.applied
+            })
+
+            if len(saved_jobs) >= 10:
+                break
+
+    if retries >= max_retries and len(saved_jobs) < 10:
+        current_app.logger.warning(f"Max retries reached with only {len(saved_jobs)} new jobs")
+
+    try:
+        db.session.commit()
+        current_app.logger.info(f"Successfully committed {len(saved_jobs)} jobs")
+        return jsonify({'message': f'{len(saved_jobs)} new jobs saved', 'saved_jobs': saved_jobs}), 200
+    except Exception as e:
+        current_app.logger.error(f"Commit failed: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save job recommendations'}), 500
+
+@api_bp.route('/search-and-recommendations', methods=['POST'])
+@login_required
+def search_and_recommend():
+    data = request.json
+    job_title = data.get('job_title')
+    location = data.get('location')
+    
+    if not job_title or not location:
+        return jsonify({'error': 'Job title and location are required'}), 400
+    
+    try:
+        jobs = search_jobs(job_title, location)
+        search_and_save_jobs_for_current_user(limit=10)
+        return jsonify({
+            'message': 'Jobs searched and recommendations saved',
+            'jobs': jobs
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error in search-and-recommendations: {str(e)}")
+        return jsonify({'error': 'Failed to search and save recommendations'}), 500
 
 @api_bp.route('/apply', methods=['POST'])
 @login_required

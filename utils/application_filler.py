@@ -2,8 +2,10 @@ import logging
 from typing import Dict, Any, List
 import asyncio
 import google.generativeai as genai
-from flask import current_app
+from flask import current_app, jsonify
 from models.user import User
+from models.job_recommendation import JobRecommendation
+from flask_login import login_required, current_user
 from playwright.async_api import async_playwright, Playwright
 import tempfile
 import os

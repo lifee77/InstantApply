@@ -1,4 +1,3 @@
-# models/job_recommendation.py
 from datetime import datetime
 from .user import db
 
