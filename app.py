@@ -27,6 +27,7 @@ from models.job_recommendation import JobRecommendation
 from routes.profile import profile_bp
 from routes.api import api_bp
 from routes.auth import auth_bp
+from routes.debug import debug_bp
 
 # Load environment variables
 load_dotenv()
@@ -58,6 +59,10 @@ def create_app():
     app.register_blueprint(profile_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
+    
+    # Register debug blueprint if in debug mode
+    if app.debug:
+        app.register_blueprint(debug_bp)
 
     @login_manager.user_loader
     def load_user(user_id):

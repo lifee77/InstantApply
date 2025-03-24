@@ -112,64 +112,89 @@ def search():
     if not job_title or not location:
         return jsonify({'error': 'Job title and location are required'}), 400
     
-    jobs = search_jobs(job_title, location)
-    saved_jobs = []
-    max_retries = 5
-    retries = 0
-
-    while len(saved_jobs) < 10 and retries < max_retries:
-        retries += 1
-        jobs = search_jobs(job_title, location, page=retries)
-
-        for job in jobs:
-            job_url = job.get('url', '').strip()
-            if not job_url:
-                continue
-            # Validate job URL before saving it
-    #        if not valid_url(job_url):
-   #             current_app.logger.warning(f"Skipping job with invalid URL: {job_url}")
-   #             continue
-
-            existing = JobRecommendation.query.filter_by(
-                user_id=current_user.id,
-                url=job_url
-            ).first()
-            if existing:
-                continue
-
-            recommendation = JobRecommendation(
-                user_id=current_user.id,
-                job_title=job.get('title', ''),
-                company=job.get('company', ''),
-                location=job.get('location', ''),
-                url=job_url,
-                applied=False,
-                match_score=0,
-                recommended_at=datetime.utcnow()
-            )
-            db.session.add(recommendation)
-            saved_jobs.append({
-                'title': recommendation.job_title,
-                'company': recommendation.company,
-                'location': recommendation.location,
-                'url': recommendation.url,
-                'applied': recommendation.applied
-            })
-
-            if len(saved_jobs) >= 10:
-                break
-
-    if retries >= max_retries and len(saved_jobs) < 10:
-        current_app.logger.warning(f"Max retries reached with only {len(saved_jobs)} new jobs")
-
     try:
-        db.session.commit()
-        current_app.logger.info(f"Successfully committed {len(saved_jobs)} jobs")
-        return jsonify({'message': f'{len(saved_jobs)} new jobs saved', 'saved_jobs': saved_jobs}), 200
+        # Log the search query
+        current_app.logger.info(f"Searching for jobs: {job_title} in {location}")
+        
+        # First, search for jobs
+        jobs = search_jobs(job_title, location)
+        
+        # Log what we found
+        current_app.logger.info(f"Found {len(jobs)} jobs")
+        
+        # Always return the jobs we found even if saving to DB fails
+        try:
+            # Only attempt to save to DB if we have the job_recommendations table
+            saved_jobs = []
+            max_retries = 5
+            retries = 0
+
+            while len(saved_jobs) < 10 and retries < max_retries:
+                retries += 1
+                if retries > 1:  # Only fetch new results after the first page
+                    current_app.logger.info(f"Fetching more jobs (page {retries})")
+                    jobs = search_jobs(job_title, location, page=retries)
+
+                for job in jobs:
+                    job_url = job.get('url', '').strip()
+                    if not job_url:
+                        continue
+
+                    try:
+                        existing = JobRecommendation.query.filter_by(
+                            user_id=current_user.id,
+                            url=job_url
+                        ).first()
+                        
+                        if existing:
+                            continue
+
+                        recommendation = JobRecommendation(
+                            user_id=current_user.id,
+                            job_title=job.get('title', ''),
+                            company=job.get('company', ''),
+                            location=job.get('location', ''),
+                            url=job_url,
+                            applied=False,
+                            match_score=0,
+                            recommended_at=datetime.utcnow()
+                        )
+                        db.session.add(recommendation)
+                        saved_jobs.append({
+                            'title': recommendation.job_title,
+                            'company': recommendation.company,
+                            'location': recommendation.location,
+                            'url': recommendation.url,
+                            'applied': recommendation.applied
+                        })
+
+                        if len(saved_jobs) >= 10:
+                            break
+                    except Exception as inner_e:
+                        # Log but continue processing other jobs
+                        current_app.logger.error(f"Error saving job: {str(inner_e)}")
+
+            try:
+                if saved_jobs:
+                    db.session.commit()
+                    current_app.logger.info(f"Successfully committed {len(saved_jobs)} jobs")
+            except Exception as commit_e:
+                current_app.logger.error(f"Commit failed: {str(commit_e)}")
+                db.session.rollback()
+        
+        except Exception as db_e:
+            current_app.logger.error(f"Database error: {str(db_e)}")
+            # No need to abort - we'll return the jobs anyway
+        
+        # Return the jobs we found regardless of any database errors
+        return jsonify({
+            'message': f'Found {len(jobs)} jobs',
+            'jobs': jobs
+        }), 200
+        
     except Exception as e:
-        current_app.logger.error(f"Commit failed: {str(e)}")
-        db.session.rollback()
-        return jsonify({'error': 'Failed to save job recommendations'}), 500
+        current_app.logger.error(f"Search error: {str(e)}")
+        return jsonify({'error': f'Search failed: {str(e)}'}), 500
 
 @api_bp.route('/search-and-recommendations', methods=['POST'])
 @login_required
@@ -382,40 +407,4 @@ def get_applications(user_id):
 @api_bp.route('/apply-page', methods=['GET'])
 @login_required
 def apply_page():
-    return '''
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Apply for Jobs</title>
-    </head>
-    <body>
-        <h1>Apply to Jobs</h1>
-        <button id="applyBtn">Apply to All Pending Jobs</button>
-
-        <script>
-            document.getElementById("applyBtn").addEventListener("click", function() {
-                // Call the new auto-apply endpoint which triggers the runner service
-                fetch('/api/auto-apply', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.message) {
-                        alert(data.message);
-                    } else if(data.error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        alert('Unexpected response.');
-                    }
-                })
-                .catch(error => {
-                    alert('Error during auto-apply: ' + error);
-                });
-            });
-        </script>
-    </body>
-    </html>
-    '''
+    return render_template('auto_apply.html')
