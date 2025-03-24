@@ -407,40 +407,4 @@ def get_applications(user_id):
 @api_bp.route('/apply-page', methods=['GET'])
 @login_required
 def apply_page():
-    return '''
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Apply for Jobs</title>
-    </head>
-    <body>
-        <h1>Apply to Jobs</h1>
-        <button id="applyBtn">Apply to All Pending Jobs</button>
-
-        <script>
-            document.getElementById("applyBtn").addEventListener("click", function() {
-                // Call the new auto-apply endpoint which triggers the runner service
-                fetch('/api/auto-apply', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.message) {
-                        alert(data.message);
-                    } else if(data.error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        alert('Unexpected response.');
-                    }
-                })
-                .catch(error => {
-                    alert('Error during auto-apply: ' + error);
-                });
-            });
-        </script>
-    </body>
-    </html>
-    '''
+    return render_template('auto_apply.html')

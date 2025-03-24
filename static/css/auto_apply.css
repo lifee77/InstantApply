@@ -1,0 +1,100 @@
+.apply-button {
+    padding: 30px 50px;
+    font-size: 2.5em;
+    font-weight: bold;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    width: 80%;
+    max-width: 600px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 20px auto;
+    animation: pulse 2s infinite;
+}
+
+.apply-button:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Add pulsing animation to draw attention */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 15px 25px rgba(76, 175, 80, 0.4);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Make sure action container can handle the large button */
+.action-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 40px 0;
+    width: 100%;
+}
+
+/* Update disabled state to maintain size */
+.apply-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    animation: none;
+    transform: scale(1);
+}
+
+
+/* Description */
+.description {
+    font-size: 1.8em;
+    font-weight: 700;
+    text-align: center;
+    color: #333;
+    margin: 30px auto;
+    max-width: 800px;
+    line-height: 1.4;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    position: relative;
+    padding: 0 20px;
+}
+
+/* Add emphasized styling to important parts */
+.description strong {
+    color: #4CAF50;
+    position: relative;
+    display: inline-block;
+}
+
+/* Optional: Add subtle animation to the text */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.description {
+    animation: fadeIn 1s ease-out;
+}
+
+/* Add a decorative element to draw attention */
+.description::after {
+    content: "";
+    display: block;
+    width: 100px;
+    height: 4px;
+    background-color: #4CAF50;
+    margin: 15px auto 0;
+    border-radius: 2px;
+}

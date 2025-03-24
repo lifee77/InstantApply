@@ -1,54 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Auto Apply - InstantApply</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply for Jobs - InstantApply</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auto_apply.css') }}">
 </head>
 <body>
-  <header>
-    <h1>InstantApply</h1>
-    <nav>
-      <a href="/dashboard">Dashboard</a> |
-      <a href="/profile">Profile</a> |
-      <a href="/applications">My Applications</a> |
-      <a href="/logout">Logout</a>
-    </nav>
-  </header>
-  
-  <main>
-    <h2>Auto Apply Jobs</h2>
-    <p>Click the button below to automatically apply to all pending job recommendations.</p>
-    <button id="autoApplyBtn">Auto Apply Jobs</button>
-    <div id="autoApplyMessage"></div>
-  </main>
-  
-  <footer>
-    <p>&copy; 2023 InstantApply</p>
-  </footer>
-  
-  <script>
-    document.getElementById("autoApplyBtn").addEventListener("click", function() {
-      // Display a message to the user while processing.
-      document.getElementById("autoApplyMessage").innerText = "Processing auto-apply...";
-      
-      fetch('/api/auto-apply', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-      .then(response => response.json())
-      .then(data => {
-        if(data.message) {
-          document.getElementById("autoApplyMessage").innerText = data.message;
-        } else if(data.error) {
-          document.getElementById("autoApplyMessage").innerText = "Error: " + data.error;
-        } else {
-          document.getElementById("autoApplyMessage").innerText = "Unexpected response.";
-        }
-      })
-      .catch(err => {
-        console.error('Error:', err);
-        document.getElementById("autoApplyMessage").innerText = "Error during auto-apply: " + err;
-      });
-    });
-  </script>
+    <header>
+        <h1>InstantApply</h1>
+        <nav>
+            <a href="/dashboard">Dashboard</a> |
+            <a href="/profile">Profile</a> |
+            <a href="/applications">My Applications</a> |
+            <a href="/logout">Logout</a>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="apply-section">
+            <p class="description">One button is all you need!!</p>
+            
+            <div class="action-container">
+                <button id="applyBtn" class="apply-button">Apply to All Pending Jobs</button>
+                <div id="status" class="status-message"></div>
+            </div>
+            
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2025 InstantApply</p>
+    </footer>
+
+    <script>
+        document.getElementById("applyBtn").addEventListener("click", function() {
+            const statusDiv = document.getElementById("status");
+            statusDiv.textContent = "Applying to jobs... This may take a few moments.";
+            statusDiv.className = "status-message processing";
+            
+            // Disable button during processing
+            this.disabled = true;
+            this.textContent = "Processing...";
+            
+            // Call the auto-apply endpoint
+            fetch('/api/auto-apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Re-enable button
+                this.disabled = false;
+                this.textContent = "Apply to All Pending Jobs";
+                
+                if(data.message) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = "status-message success";
+                } else if(data.error) {
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = "status-message error";
+                } else {
+                    statusDiv.textContent = 'Unexpected response.';
+                    statusDiv.className = "status-message error";
+                }
+            })
+            .catch(error => {
+                // Re-enable button
+                this.disabled = false;
+                this.textContent = "Apply to All Pending Jobs";
+                
+                statusDiv.textContent = 'Error during auto-apply: ' + error;
+                statusDiv.className = "status-message error";
+            });
+        });
+    </script>
 </body>
 </html>
