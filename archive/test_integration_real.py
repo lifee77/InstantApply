@@ -3,10 +3,6 @@ import sys
 import asyncio
 from unittest.mock import patch, AsyncMock
 from tempfile import NamedTemporaryFile
-
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from playwright.async_api import async_playwright
 from dotenv import load_dotenv
 from utils.application_filler import (
@@ -15,6 +11,9 @@ from utils.application_filler import (
     setup_gemini,
 )
 from models.user import User
+
+# Add project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # Load environment variables from .env
 load_dotenv()
@@ -31,13 +30,12 @@ async def integration_test():
     async with async_playwright() as p:
         # Try different browser engines in order of preference
         browser = None
-        for browser_type in [p.firefox, p.webkit, p.chromium]:
+        for browser_type in [p.firefox, p.webkit]:
             try:
                 print(f"Attempting to launch browser using {browser_type.__class__.__name__}")
                 browser = await browser_type.launch(
                     headless=False,
                     slow_mo=100,  # Changed from slowMo to slow_mo for Python naming convention
-                    args=["--no-sandbox"] if browser_type == p.chromium else []
                 )
                 print(f"✅ Successfully launched {browser_type.__class__.__name__}")
                 break
@@ -53,6 +51,8 @@ async def integration_test():
             # Create a new page with error handling
             try:
                 page = await browser.new_page()
+                await page.bring_to_front()  # Focus the new tab
+
                 print("✅ New page created")
             except Exception as e:
                 print(f"❌ Failed to create new page: {str(e)}")
@@ -69,13 +69,13 @@ async def integration_test():
                 return
 
             # Wait for page load and extract some content
-            await page.wait_for_timeout(5000)  
+            await page.wait_for_timeout(1000)  
             page_title = await page.title()
             print("✅ Page Title:", page_title)
             
             # --- Part 2: Import and use gemini_caller functions ---
             try:
-                from utils.gemini_caller import generate_cover_letter, match_job_description, extract_resume_data
+                from archive.gemini_caller import generate_cover_letter, match_job_description, extract_resume_data
                 
                 user_data_dict = {
                     "name": "John Doe",
@@ -108,21 +108,26 @@ async def integration_test():
             
             # Define mock questions and responses
             mock_questions = [
-                {"text": "What is your greatest strength?", "type": "text"}, 
-                {"text": "Why do you want to work here?", "type": "text"}
+                {"text": "Linkedin", "type": "text"},
+                {"text": "How many years of Typescript experience do you have?", "type": "integer"},
+                {"text": "Name something you've built 0 -> 1", "type": "text"},
+                {"text": "Name your favorite 3rd-party library,  and why", "type": "text"},
+                {"text": "What does your perfect job look like?", "type": "text"}
             ]
             
             mock_responses = {
-                "What is your greatest strength?": "My greatest strength is my problem-solving ability.",
-                "Why do you want to work here?": "I want to work here because I admire your commitment to innovation."
+                "Linkedin": "https://www.linkedin.com/in/annesmith",
+                "How many years of Typescript experience do you have?": "2",
+                "Name something you've built 0 -> 1": "I built an AI-powered resume matcher from scratch that parses job posts and generates tailored cover letters.",
+                "Name your favorite 3rd-party library,  and why": "I love using `zod` for runtime type validation in Typescript—it’s elegant and safe.",
+                "What does your perfect job look like?": "A collaborative remote-first role where I can own impactful features and grow with the team."
             }
             
             # Use our mocked questions
             with patch('utils.application_filler.extract_application_questions_async', new_callable=AsyncMock) as mock_extract:
                 mock_extract.return_value = mock_questions
-                questions = await extract_application_questions_async(dummy_job_id)
-                print("\n✅ Extracted Application Questions:")
-                print(questions)
+                questions = await extract_application_questions_async(dummy_job_id, page)
+                print("\n✅ Extracted Application Questions:", questions)
             
             print("\n✅ Generated Application Responses:")
             print(mock_responses)
@@ -135,10 +140,19 @@ async def integration_test():
                 input_fields = await page.query_selector_all('input:visible, textarea:visible, select:visible')
                 if input_fields:
                     print(f"Found {len(input_fields)} visible input fields")
+                    response_iterator = iter(mock_responses.values())
                     
                     # Try to fill each input field
                     for i, input_field in enumerate(input_fields):
                         try:
+                            # For the 5th input field, fill with 'no'
+                            if i == 4:
+                                await input_field.fill("no")
+                                print(f"✅ Filled input field 5 with: 'no'")
+                                await input_field.press("Tab")
+                                await page.wait_for_timeout(500)
+                                continue
+
                             input_type = await input_field.get_attribute('type') or 'text'
                             if input_type == 'file':
                                 # Skip file inputs - we'll handle them separately
@@ -166,11 +180,11 @@ async def integration_test():
                                 await input_field.fill(value)
                                 print(f"✅ Filled date field with: '{value}' (March 25, 2025)")
                             elif 'name' in name.lower() or 'name' in placeholder.lower():
-                                value = "John Doe"
+                                value = "Anne Smith"
                                 await input_field.fill(value)
                                 print(f"✅ Filled name field with: '{value}'")
                             elif 'email' in name.lower() or 'email' in placeholder.lower():
-                                value = "john.doe@example.com"
+                                value = "anne@example.com"
                                 await input_field.fill(value)
                                 print(f"✅ Filled email field with: '{value}'")
                             elif 'phone' in name.lower() or 'phone' in placeholder.lower():
@@ -178,13 +192,35 @@ async def integration_test():
                                 await input_field.fill(value)
                                 print(f"✅ Filled phone field with: '{value}'")
                             elif 'location' in name.lower() or 'location' in placeholder.lower():
-                                value = "New York, NY"
+                                value = "San Francisco, CA"
                                 await input_field.fill(value)
                                 print(f"✅ Filled location field with: '{value}'")
+                            elif 'Linkedin' in name or 'linkedin' in name.lower():
+                                value = "https://www.linkedin.com/in/annesmith"
+                                await input_field.fill(value)
+                                print(f"✅ Filled LinkedIn field with: '{value}'")
+                            elif '2338fe06-551b-42f6-a0ca-7ef1f56a87d5' in name:
+                                value = "2"
+                                await input_field.fill(value)
+                                print(f"✅ Filled Typescript experience field with: '{value}'")
+                            elif '674a1700-7669-41f4-9018-5628380dbd08' in name:
+                                value = "I built an AI-powered resume matcher from scratch that parses job posts and generates tailored cover letters."
+                                await input_field.fill(value)
+                                print(f"✅ Filled project description field with: '{value}'")
+                            elif '04670e81-4c7c-4e52-8600-4143333affc5' in name:
+                                value = "I love using `zod` for runtime type validation in Typescript—it’s elegant and safe."
+                                await input_field.fill(value)
+                                print(f"✅ Filled library description field with: '{value}'")
+                            elif 'd9c8fbe2-4ed3-40c8-a9b3-544c8b4c2803' in name:
+                                value = "A collaborative remote-first role where I can own impactful features and grow with the team."
+                                await input_field.fill(value)
+                                print(f"✅ Filled job description field with: '{value}'")
+
                             else:
-                                # For other text fields, use our first mock response
-                                response_key = list(mock_responses.keys())[0]
-                                value = mock_responses[response_key]
+                                try:
+                                    value = next(response_iterator)
+                                except StopIteration:
+                                    value = next(response_iterator)
                                 await input_field.fill(value)
                                 print(f"✅ Filled field '{name or placeholder}' with: '{value}'")
                             
@@ -280,40 +316,42 @@ async def integration_test():
                 
                 # --- Handle Yes/No buttons and radio buttons for questions like visa requirements ---
                 try:
-                    # Look for labels containing visa-related text
-                    visa_labels = await page.query_selector_all('label:has-text("visa"), label:has-text("Visa"), span:has-text("visa"), span:has-text("Visa")')
-                    
-                    for label in visa_labels:
-                        label_text = await label.inner_text()
-                        print(f"Found visa-related question: '{label_text}'")
-                        
-                        # Find related radio buttons or regular buttons
-                        parent = label
-                        for _ in range(3):  # Go up to 3 levels up to find container
-                            parent = await page.evaluate('(el) => el.parentElement', parent)
-                            if not parent:
+                    # Global flag to ensure we only click one visa-related "No" button
+                    visa_clicked = False
+                    visa_elements = await page.query_selector_all('*:has-text("visa"), *:has-text("Visa")')
+
+                    for element in visa_elements:
+                        if visa_clicked:
+                            break
+                        label_text = await element.inner_text()
+                        if not label_text:
+                            continue
+
+                        print(f"Found possible visa-related question text: '{label_text}'")
+
+                        container = element
+                        for _ in range(3):
+                            if visa_clicked:
                                 break
-                                
-                            # Look for radio inputs within this container
-                            radio_inputs = await page.query_selector_all('input[type="radio"]')
-                            if radio_inputs:
-                                # Typically select "No" for visa questions
-                                for radio in radio_inputs:
-                                    value = await radio.get_attribute('value') or ''
-                                    if value.lower() in ['no', 'false', '0', 'n']:
-                                        await radio.check()
-                                        print(f"✅ Selected 'No' for visa question")
+                            yes_no_buttons = await container.query_selector_all(
+                                'button:has-text("Yes"), button:has-text("No"), '
+                                '[role="button"]:has-text("Yes"), [role="button"]:has-text("No")'
+                            )
+                            if yes_no_buttons:
+                                for btn in yes_no_buttons:
+                                    btn_text = (await btn.inner_text()).strip().lower()
+                                    if btn_text == 'no':
+                                        aria_pressed = await btn.get_attribute('aria-pressed')
+                                        if aria_pressed == 'true':
+                                            print(f"ℹ️ 'No' button already selected for visa question: '{label_text}'")
+                                        else:
+                                            await btn.click()
+                                            print(f"✅ Clicked 'No' button for visa question: '{label_text}'")
+                                        visa_clicked = True
                                         break
+                            container = await page.evaluate_handle('(el) => el.parentElement', container)
+                            if not container:
                                 break
-                            
-                            # Look for yes/no buttons
-                            buttons = await page.query_selector_all('button, .btn')
-                            for button in buttons:
-                                button_text = await button.inner_text()
-                                if button_text.lower() == 'no':
-                                    await button.click()
-                                    print(f"✅ Clicked 'No' button for visa question")
-                                    break
                 except Exception as e:
                     print(f"❌ Error handling yes/no questions: {str(e)}")
                 
@@ -392,10 +430,34 @@ async def integration_test():
                 try:
                     file_input = await page.query_selector('input[type="file"]')
                     if file_input:
-                        # Create a simple PDF file
-                        with NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                        import os
+                        import tempfile
+                        temp_path = os.path.join(tempfile.gettempdir(), "anne_resume.pdf")
+                        with open(temp_path, "wb") as temp_file:
                             temp_file.write(b"%PDF-1.4\n%Mock Resume")
-                            temp_path = temp_file.name
+                        
+                        await file_input.set_input_files(temp_path)
+                        print(f"✅ Uploaded resume file: '{temp_path}'")
+                        
+                        # Highlight the file upload section
+                        await page.evaluate("""() => {
+                            const fileInput = document.querySelector('input[type="file"]');
+                            if (fileInput && fileInput.parentElement) {
+                                fileInput.parentElement.style.border = '2px solid green';
+                                fileInput.parentElement.style.padding = '5px';
+                            }
+                        }""")
+                except Exception as e:
+                    print(f"❌ Error uploading resume: {str(e)}")
+
+                try:
+                    file_input = await page.query_selector('input[type="file"]')
+                    if file_input:
+                        import os
+                        import tempfile
+                        temp_path = os.path.join(tempfile.gettempdir(), "anne_resume.pdf")
+                        with open(temp_path, "wb") as temp_file:
+                            temp_file.write(b"%PDF-1.4\n%Mock Resume")
                         
                         await file_input.set_input_files(temp_path)
                         print(f"✅ Uploaded resume file: '{temp_path}'")

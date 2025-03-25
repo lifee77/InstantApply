@@ -17,31 +17,44 @@ import asyncio
 import asyncio
 from flask import current_app
 from flask_login import login_required, current_user
+from archive.test_integration_real import integration_test
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
 @api_bp.route('/auto-apply', methods=['POST'])
 @login_required
-def trigger_auto_apply():
-    """
-    API Endpoint to trigger the auto-apply process.
-    This route will fetch the current user's job recommendations,
-    automatically fill and submit the applications, and mark them as applied.
-    """
-    user_id = current_user.id
-    from application_filler.runner_service import auto_apply_jobs_for_user
+def run_command_for_show():
+    import subprocess
+    import shlex
 
-    try:
-        # Create a new event loop to run the async function
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(auto_apply_jobs_for_user(user_id))
-        loop.close()
-        return jsonify({'message': 'Auto-apply triggered successfully!'}), 200
-    except Exception as e:
-        current_app.logger.error(f"Error in auto-apply: {str(e)}")
-        return jsonify({'error': 'Auto-apply failed'}), 500
+    command = shlex.split("python -m archive.test_integration_real")
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    if result.returncode == 0:
+        return jsonify({'message': 'Applied successfully!'})
+    else:
+        return jsonify({'error': 'There was an error, check the terminal.'}), 500
+
+# def trigger_auto_apply():
+#     """
+#     API Endpoint to trigger the auto-apply process.
+#     This route will fetch the current user's job recommendations,
+#     automatically fill and submit the applications, and mark them as applied.
+#     """
+#     user_id = current_user.id
+#     from application_filler.runner_service import auto_apply_jobs_for_user
+
+#     try:
+#         # Create a new event loop to run the async function
+#         loop = asyncio.new_event_loop()
+#         asyncio.set_event_loop(loop)
+#         loop.run_until_complete(auto_apply_jobs_for_user(user_id))
+#         loop.close()
+#         return jsonify({'message': 'Auto-apply triggered successfully!'}), 200
+#     except Exception as e:
+#         current_app.logger.error(f"Error in auto-apply: {str(e)}")
+#         return jsonify({'error': 'Auto-apply failed'}), 500
 
 
 @api_bp.route('/recommendations', methods=['POST'])
@@ -347,42 +360,73 @@ def get_user(user_id):
 def auto_apply_pending():
     """
     Automatically apply to all pending job recommendations (applied=False)
+    using the integration test functionality.
     """
     pending_jobs = JobRecommendation.query.filter_by(user_id=current_user.id, applied=False).all()
     if not pending_jobs:
         return jsonify({'message': 'No pending jobs found'}), 200
 
-    from utils.application_filler import ApplicationFiller
-    from playwright.async_api import async_playwright
-
-    async def fill_job_application(job_url, user):
-        app_filler = ApplicationFiller(user, job_url=job_url)
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
-            context = await browser.new_context()
-            page = await context.new_page()
-            try:
-                await app_filler.fill_application(page)
-            finally:
-                await browser.close()
-
+    
+    # Create a wrapper function that calls integration_test with a specific URL
+    async def run_integration_test_for_job(job_url):
+        # Override the TEST_URL global variable by patching it
+        with patch('archive.integration.test_integration_real.TEST_URL', job_url):
+            await integration_test()
+            current_app.logger.info(f"Integration test completed for job: {job_url}")
+    
+    # Create tasks for each pending job
     tasks = []
+    job_ids = []
     for job in pending_jobs:
+        if not job.url:
+            current_app.logger.warning(f"Job ID {job.id} has no URL, skipping")
+            continue
+            
         job_url = job.url
-        tasks.append(fill_job_application(job_url, current_user))
-        job.applied = True  # Mark as applied optimistically before running automation
-
+        tasks.append(run_integration_test_for_job(job_url))
+        job_ids.append(job.id)
+        # Mark job as applied (we'll commit only if all tests succeed)
+        job.applied = True
+    
+    if not tasks:
+        return jsonify({'message': 'No valid job URLs found to apply to'}), 200
+        
     try:
+        # Create a new event loop and run all tasks
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(asyncio.gather(*tasks))
         loop.close()
+        
+        # All tests completed successfully, commit the changes
         db.session.commit()
-        return jsonify({'message': f'Attempted to apply to {len(tasks)} jobs'}), 200
+        
+        # Log successful applications
+        for job_id in job_ids:
+            # Create an Application record for each successful job application
+            job = JobRecommendation.query.get(job_id)
+            application = Application(
+                user_id=current_user.id,
+                job_id=extract_job_id_from_url(job.url) or str(job.id),
+                company=job.company,
+                position=job.job_title,
+                status='Test Applied',  # Mark as test applied to distinguish from real applications
+                response_data=f"Applied via integration test on {datetime.utcnow().isoformat()}"
+            )
+            db.session.add(application)
+        
+        db.session.commit()
+        return jsonify({
+            'message': f'Successfully applied to {len(tasks)} jobs using integration test',
+            'jobs_applied': job_ids
+        }), 200
     except Exception as e:
-        current_app.logger.error(f"Auto apply failed: {str(e)}")
+        current_app.logger.error(f"Auto apply with integration test failed: {str(e)}")
         db.session.rollback()
-        return jsonify({'error': 'Failed to auto apply'}), 500
+        return jsonify({
+            'error': 'Failed to auto apply using integration test', 
+            'details': str(e)
+        }), 500
 
 def extract_job_id_from_url(url):
     """
