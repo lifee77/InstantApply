@@ -1,0 +1,27 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h3>Additional Qualifications</h3>
+    </div>
+    <div class="card-body">
+        {% if current_user.certifications %}
+            <h4>Certifications</h4>
+            <ul>
+                {% for cert in current_user.certifications %}
+                    <li>
+                        <strong>{{ cert.name }}</strong>
+                        {% if cert.organization %} - {{ cert.organization }}{% endif %}
+                        {% if cert.expiry %} (Expires: {{ cert.expiry }}){% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% if current_user.languages %}
+            <h4>Languages</h4>
+            <ul>
+                {% for lang in current_user.languages %}
+                    <li><strong>{{ lang.language }}</strong> - {{ lang.proficiency }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>

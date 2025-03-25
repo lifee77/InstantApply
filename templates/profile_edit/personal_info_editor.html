@@ -1,0 +1,40 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4>Personal Information</h4>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="name" class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" readonly>
+            <div class="form-text">Email cannot be changed.</div>
+        </div>
+        <div class="mb-3">
+            <label for="professional_summary" class="form-label">Professional Summary</label>
+            <textarea class="form-control" id="professional_summary" name="professional_summary" rows="4">{{ current_user.professional_summary or '' }}</textarea>
+            <div class="form-text">Brief overview of your professional background, skills, and career objectives.</div>
+        </div>
+        <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="willing_to_relocate" name="willing_to_relocate" {% if current_user.willing_to_relocate %}checked{% endif %}>
+            <label class="form-check-label" for="willing_to_relocate">Willing to Relocate</label>
+        </div>
+        <div class="mb-3">
+            <label for="authorization_status" class="form-label">Work Authorization Status</label>
+            <select class="form-select" id="authorization_status" name="authorization_status">
+                <option value="" {% if not current_user.authorization_status %}selected{% endif %}>Select status...</option>
+                <option value="US Citizen" {% if current_user.authorization_status == "US Citizen" %}selected{% endif %}>US Citizen</option>
+                <option value="Green Card Holder" {% if current_user.authorization_status == "Green Card Holder" %}selected{% endif %}>Green Card Holder</option>
+                <option value="H1B Visa" {% if current_user.authorization_status == "H1B Visa" %}selected{% endif %}>H1B Visa</option>
+                <option value="F1 OPT" {% if current_user.authorization_status == "F1 OPT" %}selected{% endif %}>F1 OPT</option>
+                <option value="Other" {% if current_user.authorization_status and current_user.authorization_status not in ["US Citizen", "Green Card Holder", "H1B Visa", "F1 OPT"] %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="linkedin_url" class="form-label">LinkedIn URL</label>
+            <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{ current_user.linkedin_url or '' }}">
+        </div>
+    </div>
+</div>

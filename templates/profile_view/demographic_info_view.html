@@ -1,0 +1,39 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h3>Demographic Information</h3>
+        <small class="text-white-50">This information is optional and only used when required by employers</small>
+    </div>
+    <div class="card-body">
+        {% if current_user.race_ethnicity %}
+            <p><strong>Race/Ethnicity:</strong> {{ current_user.race_ethnicity }}</p>
+        {% endif %}
+        {% if current_user.gender %}
+            <p><strong>Gender:</strong> {{ current_user.gender }}</p>
+        {% endif %}
+        {% if current_user.graduation_date %}
+            <p><strong>Graduation Date:</strong> {{ current_user.graduation_date }}</p>
+        {% endif %}
+        {% if current_user.disability_status %}
+            <p><strong>Disability Status:</strong> {{ current_user.disability_status }}</p>
+        {% endif %}
+        {% if current_user.military_status and current_user.military_status != "No Military Service" %}
+            <p><strong>Military Status:</strong> {{ current_user.military_status }}</p>
+            {% if current_user.military_branch %}
+                <p><strong>Military Branch:</strong> {{ current_user.military_branch }}</p>
+            {% endif %}
+            {% if current_user.military_discharge_date %}
+                <p><strong>Discharge Date:</strong> {{ current_user.military_discharge_date }}</p>
+            {% endif %}
+            {% if current_user.veteran_status %}
+                <p><strong>Veteran Status:</strong> {{ current_user.veteran_status }}</p>
+            {% endif %}
+        {% endif %}
+        {% if current_user.needs_sponsorship or current_user.visa_status %}
+            <h4>Immigration Information</h4>
+            <p><strong>Needs Sponsorship:</strong> {{ 'Yes' if current_user.needs_sponsorship else 'No' }}</p>
+            {% if current_user.visa_status %}
+                <p><strong>Visa Status:</strong> {{ current_user.visa_status }}</p>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>

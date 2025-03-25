@@ -1,0 +1,55 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4>Additional Qualifications</h4>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Certifications</label>
+            <div id="certifications-container">
+                <div class="certification-entry border rounded p-3 mb-3">
+                    <div class="mb-2">
+                        <label class="form-label">Certification Name</label>
+                        <input type="text" class="form-control cert-name" placeholder="e.g., AWS Solutions Architect">
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label">Issuing Organization</label>
+                            <input type="text" class="form-control cert-org" placeholder="e.g., Amazon Web Services">
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Expiration Date</label>
+                            <input type="date" class="form-control cert-expiry">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-cert">Remove</button>
+                </div>
+            </div>
+            <button type="button" id="add-certification" class="btn btn-secondary btn-sm">+ Add Certification</button>
+            <input type="hidden" name="certifications" id="certifications_json">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Languages</label>
+            <div id="languages-container">
+                <div class="language-entry row mb-2">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control language-name" placeholder="Language">
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select language-proficiency">
+                            <option value="Native">Native</option>
+                            <option value="Fluent">Fluent</option>
+                            <option value="Advanced">Advanced</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Basic">Basic</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger remove-language">Remove</button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="add-language" class="btn btn-secondary btn-sm mt-2">+ Add Language</button>
+            <input type="hidden" name="languages" id="languages_json">
+        </div>
+    </div>
+</div>
