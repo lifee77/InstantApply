@@ -1,0 +1,31 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h3>Skills & Experience</h3>
+    </div>
+    <div class="card-body">
+        {% if current_user.skills %}
+            <h4>Skills</h4>
+            <p>{{ current_user.skills }}</p>
+        {% endif %}
+        {% if current_user.experience %}
+            <h4>Experience</h4>
+            <div class="resume-text">{{ current_user.experience }}</div>
+        {% endif %}
+        {% if current_user.desired_job_titles %}
+            <h4>Desired Job Titles</h4>
+            <ul>
+                {% for title in current_user.desired_job_titles %}
+                    <li>{{ title }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% if current_user.portfolio_links %}
+            <h4>Portfolio Links</h4>
+            <ul>
+                {% for link in current_user.portfolio_links %}
+                    <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>

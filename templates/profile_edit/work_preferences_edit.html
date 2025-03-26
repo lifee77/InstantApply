@@ -1,0 +1,41 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4>Work Preferences</h4>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="desired_salary_range" class="form-label">Desired Salary Range</label>
+            <input type="text" class="form-control" id="desired_salary_range" name="desired_salary_range" placeholder="e.g., $80,000 - $100,000" value="{{ current_user.desired_salary_range or '' }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Work Mode Preference</label>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="work_mode_preference" id="remote" value="Remote" {% if current_user.work_mode_preference == "Remote" %}checked{% endif %}>
+                <label class="form-check-label" for="remote">Remote</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="work_mode_preference" id="hybrid" value="Hybrid" {% if current_user.work_mode_preference == "Hybrid" %}checked{% endif %}>
+                <label class="form-check-label" for="hybrid">Hybrid</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="work_mode_preference" id="in-office" value="In-Office" {% if current_user.work_mode_preference == "In-Office" %}checked{% endif %}>
+                <label class="form-check-label" for="in-office">In-Office</label>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="available_start_date" class="form-label">Available Start Date</label>
+            <input type="date" class="form-control" id="available_start_date" name="available_start_date" value="{{ current_user.available_start_date or '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="preferred_company_type" class="form-label">Preferred Company Type</label>
+            <select class="form-select" id="preferred_company_type" name="preferred_company_type">
+                <option value="" {% if not current_user.preferred_company_type %}selected{% endif %}>Select preference...</option>
+                <option value="Startup" {% if current_user.preferred_company_type == "Startup" %}selected{% endif %}>Startup</option>
+                <option value="Small Business" {% if current_user.preferred_company_type == "Small Business" %}selected{% endif %}>Small Business</option>
+                <option value="Mid-size Company" {% if current_user.preferred_company_type == "Mid-size Company" %}selected{% endif %}>Mid-size Company</option>
+                <option value="Large Enterprise" {% if current_user.preferred_company_type == "Large Enterprise" %}selected{% endif %}>Large Enterprise</option>
+                <option value="No Preference" {% if current_user.preferred_company_type == "No Preference" %}selected{% endif %}>No Preference</option>
+            </select>
+        </div>
+    </div>
+</div>

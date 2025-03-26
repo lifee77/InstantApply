@@ -12,6 +12,7 @@ __pycache__/
 # Database
 instance/
 debug/
+uploads
 
 cacert.pem
 # Distribution / packaging
