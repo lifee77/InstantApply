@@ -154,7 +154,8 @@ document.addEventListener('DOMContentLoaded', function() {
         portfolioLinks: document.getElementById('portfolio_links_json')?.dataset?.initial || '[]',
         certifications: document.getElementById('certifications_json')?.dataset?.initial || '[]',
         languages: document.getElementById('languages_json')?.dataset?.initial || '[]',
-        values: document.getElementById('applicant_values_json')?.dataset?.initial || '[]'
+        values: document.getElementById('applicant_values_json')?.dataset?.initial || '[]',
+        projects: document.getElementById('projects_json')?.dataset?.initial || '[]'
     };
 
     initializeDynamicFields('job-titles-container', initialData.jobTitles, addJobTitleField);
@@ -162,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDynamicFields('certifications-container', initialData.certifications, addCertificationField);
     initializeDynamicFields('languages-container', initialData.languages, addLanguageField);
     initializeDynamicFields('values-container', initialData.values, addValueField);
+    initializeDynamicFields('projects-container', initialData.projects, addProjectField);
 
     toggleMilitaryFields();
 
@@ -293,6 +295,135 @@ function addValueField(value = '') {
     div.querySelector('.remove-value').addEventListener('click', () => container.removeChild(div));
 }
 
+// New function for managing projects
+document.getElementById('add-project')?.addEventListener('click', () => addProjectField());
+function addProjectField(project = {}) {
+    const container = document.getElementById('projects-container');
+    const div = document.createElement('div');
+    div.className = 'project-entry border rounded p-3 mb-3';
+    
+    // Generate a unique ID for technology tags input
+    const techInputId = 'tech-input-' + Date.now();
+    
+    div.innerHTML = `
+        <div class="mb-3">
+            <label class="form-label">Project Name</label>
+            <input type="text" class="form-control project-name" value="${project.name || ''}" placeholder="e.g., Personal Portfolio Website">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control project-description" rows="2" placeholder="Brief description of your project">${project.description || ''}</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Project URL (optional)</label>
+            <input type="url" class="form-control project-link" value="${project.link || ''}" placeholder="e.g., https://github.com/username/project">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Technologies Used</label>
+            <div class="tech-tags-container mb-2">
+                ${(project.technologies || []).map(tech => 
+                    `<span class="badge bg-secondary me-1 mb-1 tech-tag">
+                        ${tech}<button type="button" class="btn-close btn-close-white ms-1" aria-label="Remove"></button>
+                    </span>`).join('')}
+            </div>
+            <div class="input-group">
+                <input type="text" class="form-control" id="${techInputId}" placeholder="Type a technology and press Enter (e.g., React)">
+                <button type="button" class="btn btn-outline-primary add-tech">Add</button>
+            </div>
+        </div>
+        <div class="mb-3 project-details-container">
+            <label class="form-label">Project Details</label>
+            <div class="project-details">
+                ${(project.details || []).map(detail => 
+                    `<div class="input-group mb-2 detail-entry">
+                        <input type="text" class="form-control project-detail" value="${detail}" placeholder="e.g., Implemented responsive design">
+                        <button type="button" class="btn btn-outline-danger remove-detail">Remove</button>
+                    </div>`).join('')}
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm add-project-detail">
+                <i class="bi bi-plus"></i> Add Detail
+            </button>
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-project">Remove Project</button>
+    `;
+    
+    container.appendChild(div);
+    
+    // Set up event listeners for the project entry
+    div.querySelector('.remove-project').addEventListener('click', () => {
+        container.removeChild(div);
+    });
+    
+    // Add project detail
+    div.querySelector('.add-project-detail').addEventListener('click', () => {
+        const detailsContainer = div.querySelector('.project-details');
+        const detailDiv = document.createElement('div');
+        detailDiv.className = 'input-group mb-2 detail-entry';
+        detailDiv.innerHTML = `
+            <input type="text" class="form-control project-detail" placeholder="e.g., Implemented responsive design">
+            <button type="button" class="btn btn-outline-danger remove-detail">Remove</button>
+        `;
+        detailsContainer.appendChild(detailDiv);
+        
+        detailDiv.querySelector('.remove-detail').addEventListener('click', () => {
+            detailsContainer.removeChild(detailDiv);
+        });
+    });
+    
+    // Handle existing details
+    div.querySelectorAll('.remove-detail').forEach(button => {
+        button.addEventListener('click', () => {
+            const detailEntry = button.closest('.detail-entry');
+            detailEntry.parentNode.removeChild(detailEntry);
+        });
+    });
+    
+    // Handle technology tags
+    const techInput = div.querySelector(`#${techInputId}`);
+    const addTechButton = div.querySelector('.add-tech');
+    const tagsContainer = div.querySelector('.tech-tags-container');
+    
+    function addTechTag(techName) {
+        if (!techName.trim()) return;
+        
+        const tagSpan = document.createElement('span');
+        tagSpan.className = 'badge bg-secondary me-1 mb-1 tech-tag';
+        tagSpan.innerHTML = `
+            ${techName.trim()}
+            <button type="button" class="btn-close btn-close-white ms-1" aria-label="Remove"></button>
+        `;
+        tagsContainer.appendChild(tagSpan);
+        
+        // Add remove button functionality
+        tagSpan.querySelector('.btn-close').addEventListener('click', () => {
+            tagsContainer.removeChild(tagSpan);
+        });
+        
+        techInput.value = '';
+    }
+    
+    // Add tech tag with button
+    addTechButton.addEventListener('click', () => {
+        addTechTag(techInput.value);
+    });
+    
+    // Add tech tag with Enter key
+    techInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addTechTag(techInput.value);
+        }
+    });
+    
+    // Handle existing tech tags
+    div.querySelectorAll('.tech-tag .btn-close').forEach(button => {
+        button.addEventListener('click', () => {
+            const tagSpan = button.closest('.tech-tag');
+            tagsContainer.removeChild(tagSpan);
+        });
+    });
+}
+
 document.querySelector('form').addEventListener('submit', function(event) {
     const jobTitles = [];
     document.querySelectorAll('.job-title').forEach(input => {
@@ -328,4 +459,39 @@ document.querySelector('form').addEventListener('submit', function(event) {
         if (input.value.trim()) values.push(input.value.trim());
     });
     document.getElementById('applicant_values_json').value = JSON.stringify(values);
+
+    // Projects - New
+    const projects = [];
+    document.querySelectorAll('.project-entry').forEach(projectEntry => {
+        const name = projectEntry.querySelector('.project-name').value.trim();
+        const description = projectEntry.querySelector('.project-description').value.trim();
+        const link = projectEntry.querySelector('.project-link').value.trim();
+        
+        // Extract technologies
+        const technologies = [];
+        projectEntry.querySelectorAll('.tech-tag').forEach(tag => {
+            const techName = tag.textContent.trim();
+            if (techName) technologies.push(techName);
+        });
+        
+        // Extract project details
+        const details = [];
+        projectEntry.querySelectorAll('.project-detail').forEach(detail => {
+            const detailText = detail.value.trim();
+            if (detailText) details.push(detailText);
+        });
+        
+        if (name) {
+            projects.push({
+                name,
+                description,
+                link,
+                technologies,
+                details
+            });
+        }
+    });
+    
+    const projectsInput = document.getElementById('projects_json');
+    if (projectsInput) projectsInput.value = JSON.stringify(projects);
 });

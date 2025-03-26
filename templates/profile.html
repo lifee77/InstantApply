@@ -5,6 +5,14 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<style>
+  .btn-action-label {
+    display: block;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    color: #6c757d;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -18,16 +26,19 @@
         </div>
         <div class="text-end">
             {% if current_user.resume_file_path %}
-                <a href="{{ url_for('profile.upload_resume') }}" class="btn btn-outline-primary me-2">
+                <a href="{{ url_for('profile.upload_resume') }}" class="btn btn-outline-primary me-2 position-relative">
                     <i class="bi bi-file-earmark-arrow-up"></i> Replace Resume
+                    <small class="btn-action-label">Upload a new resume file</small>
                 </a>
             {% else %}
-                <a href="{{ url_for('profile.upload_resume') }}" class="btn btn-primary me-2">
+                <a href="{{ url_for('profile.upload_resume') }}" class="btn btn-primary me-2 position-relative">
                     <i class="bi bi-file-earmark-arrow-up"></i> Upload Resume
+                    <small class="btn-action-label">Upload your resume to auto-fill profile</small>
                 </a>
             {% endif %}
-            <button id="btn-edit-profile" class="btn btn-secondary">
+            <button id="btn-edit-profile" class="btn btn-secondary position-relative">
                 <i class="bi bi-pencil"></i> Edit Profile
+                <small class="btn-action-label">Manually update profile details</small>
             </button>
         </div>
     </div>
@@ -52,6 +63,7 @@
         {% include 'profile_view/personal_info_view.html' %}
         {% include 'profile_view/resume_view.html' %}
         {% include 'profile_view/skills_experience_view.html' %}
+        {% include 'profile_view/projects_view.html' %}
         {% include 'profile_view/work_preferences_view.html' %}
         {% include 'profile_view/additional_qualifications_view.html' %}
         {% include 'profile_view/career_info_view.html' %}
@@ -65,6 +77,7 @@
             {% include 'profile_edit/resume_edit.html' %} <!-- Moved to top -->
             {% include 'profile_edit/personal_info_edit.html' %}
             {% include 'profile_edit/skills_experience_edit.html' %}
+            {% include 'profile_edit/projects_edit.html' %}
             {% include 'profile_edit/work_preferences_edit.html' %}
             {% include 'profile_edit/additional_qualifications_edit.html' %}
             {% include 'profile_edit/career_info_edit.html' %}
@@ -79,13 +92,26 @@
 
 <!-- Pass initial data to JavaScript -->
 <script>
-    window.initialData = {
-        jobTitles: '{{ current_user.desired_job_titles|tojson|safe if current_user.desired_job_titles else "[]" }}',
-        portfolioLinks: '{{ current_user.portfolio_links|tojson|safe if current_user.portfolio_links else "[]" }}',
-        certifications: '{{ current_user.certifications|tojson|safe if current_user.certifications else "[]" }}',
-        languages: '{{ current_user.languages|tojson|safe if current_user.languages else "[]" }}',
-        values: '{{ current_user.applicant_values|tojson|safe if current_user.applicant_values else "[]" }}'
-    };
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up data attributes for initial field values
+        const jobTitlesJson = document.getElementById('desired_job_titles_json');
+        if (jobTitlesJson) jobTitlesJson.dataset.initial = '{{ current_user.desired_job_titles|tojson|safe if current_user.desired_job_titles else "[]" }}';
+        
+        const portfolioLinksJson = document.getElementById('portfolio_links_json');
+        if (portfolioLinksJson) portfolioLinksJson.dataset.initial = '{{ current_user.portfolio_links|tojson|safe if current_user.portfolio_links else "[]" }}';
+        
+        const certificationsJson = document.getElementById('certifications_json');
+        if (certificationsJson) certificationsJson.dataset.initial = '{{ current_user.certifications|tojson|safe if current_user.certifications else "[]" }}';
+        
+        const languagesJson = document.getElementById('languages_json');
+        if (languagesJson) languagesJson.dataset.initial = '{{ current_user.languages|tojson|safe if current_user.languages else "[]" }}';
+        
+        const valuesJson = document.getElementById('applicant_values_json');
+        if (valuesJson) valuesJson.dataset.initial = '{{ current_user.applicant_values|tojson|safe if current_user.applicant_values else "[]" }}';
+        
+        const projectsJson = document.getElementById('projects_json');
+        if (projectsJson) projectsJson.dataset.initial = '{{ current_user.projects|tojson|safe if current_user.projects else "[]" }}';
+    });
 </script>
 {% endblock %}
 
