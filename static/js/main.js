@@ -10,10 +10,12 @@
     <header class="top-header">
         <div class="brand">INSTANTAPPLY</div>
         <nav>
-            <ul>
+            <ul class="nav-left" style="margin-left: 1.5rem;">
                 <li><a href="/profile">Profile</a></li>
                 <li><a href="/dashboard">Dashboard</a></li>
                 <li><a href="/applications">My Applications</a></li>
+            </ul>
+            <ul class="nav-right">
                 <li><a href="/logout">Log Out</a></li>
             </ul>
         </nav>
