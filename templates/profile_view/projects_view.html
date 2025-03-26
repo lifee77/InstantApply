@@ -1,0 +1,49 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h3>Projects</h3>
+    </div>
+    <div class="card-body">
+        {% if current_user.projects %}
+            <div class="projects-list">
+                {% for project in current_user.projects %}
+                    <div class="project-item mb-4 p-3 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ project.name }}</h4>
+                            {% if project.link %}
+                                <a href="{{ project.link }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-link-45deg"></i> View Project
+                                </a>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="description mb-2">{{ project.description }}</p>
+                        
+                        {% if project.technologies and project.technologies|length > 0 %}
+                            <div class="technologies mb-2">
+                                <strong>Technologies:</strong>
+                                <div class="skills-tag-container">
+                                    {% for tech in project.technologies %}
+                                        <span class="badge bg-light text-dark">{{ tech }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if project.details and project.details|length > 0 %}
+                            <div class="project-details mb-2">
+                                <strong>Details:</strong>
+                                <ul class="mb-0">
+                                    {% for detail in project.details %}
+                                        <li>{{ detail }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-field">No projects added yet. Click 'Edit Profile' to add your projects.</p>
+        {% endif %}
+    </div>
+</div>

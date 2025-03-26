@@ -7,6 +7,7 @@ import PyPDF2
 import docx2txt
 import datetime
 import logging
+import time
 
 from models.user import db, User
 from forms.profile import ProfileForm
@@ -50,7 +51,6 @@ def profile():
                     
                     # The property setter will handle JSON serialization
                     current_user.desired_job_titles = job_titles
-                    current_app.logger.info(f"Processed job titles: {current_user.desired_job_titles}")
                     current_app.logger.debug(f"Stored representation: {current_user._desired_job_titles}")
                 except Exception as e:
                     current_app.logger.error(f"Error processing job titles: {str(e)}")
@@ -77,6 +77,11 @@ def profile():
             values_json = request.form.get('applicant_values')
             if values_json:
                 current_user.applicant_values = json.loads(values_json)
+                
+            # Process projects
+            projects_json = request.form.get('projects')
+            if projects_json:
+                current_user.projects = json.loads(projects_json)
                 
         except json.JSONDecodeError as e:
             current_app.logger.error(f"JSON parsing error: {str(e)}")
@@ -117,8 +122,6 @@ def profile():
                         current_user.resume_file_path = file_path
                         if resume_text:
                             current_user.resume = resume_text
-                        
-                        flash('Resume uploaded and processed successfully.', 'success')
                 except Exception as e:
                     flash(f'Error processing resume: {str(e)}', 'danger')
         
@@ -145,8 +148,15 @@ def upload_resume():
             file = request.files['resume_file']
             if file and file.filename != '':
                 try:
+                    # Track start time for parsing
+                    start_time = time.time()
+                    
                     # Process the resume file
                     file_path, filename, resume_text = process_resume_file(file)
+                    
+                    # Log parsing time for debugging
+                    parsing_time = time.time() - start_time
+                    current_app.logger.info(f"Resume parsed in {parsing_time:.2f} seconds")
                     
                     if file_path:
                         # Update user's resume information
@@ -158,10 +168,13 @@ def upload_resume():
                         # Save changes to database
                         db.session.commit()
                         
+                        # Redirect with success message (only once)
                         flash('Resume uploaded and parsed successfully. Please review your profile information.', 'success')
                         return redirect(url_for('profile.profile'))
                 except Exception as e:
+                    current_app.logger.error(f"Error in resume upload: {str(e)}")
                     flash(f'Error processing resume: {str(e)}', 'danger')
+                    return redirect(url_for('profile.upload_resume'))
         else:
             flash('No resume file selected.', 'warning')
     
@@ -223,7 +236,7 @@ def process_resume_file(file):
     parsed_data = parse_resume_with_spacy(resume_text)
     current_app.logger.info(f"Auto-filled data: {parsed_data}")
 
-    # Auto-fill fields into current_user
+    # Auto-fill fields into current_user with better structure for experience
     if parsed_data.get("name"):
         current_user.name = parsed_data["name"]
     if parsed_data.get("linkedin"):
@@ -232,8 +245,17 @@ def process_resume_file(file):
         current_user.professional_summary = parsed_data["professional_summary"]
     if parsed_data.get("skills"):
         current_user.skills = json.dumps(parsed_data["skills"])
+    
+    # Improved experience handling
     if parsed_data.get("experience"):
+        # Convert experience from objects to properly formatted JSON
         current_user.experience = json.dumps(parsed_data["experience"])
+    
+    # Projects handling
+    if parsed_data.get("projects"):
+        current_user.projects = json.dumps(parsed_data["projects"])
+    
+    # Other fields
     if parsed_data.get("certifications"):
         current_user.certifications = json.dumps([{"name": cert, "organization": "", "expiry": ""} for cert in parsed_data["certifications"]])
     if parsed_data.get("languages"):

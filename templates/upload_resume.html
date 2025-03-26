@@ -83,6 +83,12 @@
         height: 2rem;
         margin-bottom: 10px;
     }
+    
+    .parsing-error {
+        display: none;
+        margin-top: 20px;
+        color: #dc3545;
+    }
 </style>
 {% endblock %}
 
@@ -121,6 +127,14 @@
                 <p>Parsing your resume... This may take a moment.</p>
             </div>
             
+            <div id="parsing-error" class="parsing-error">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="error-message">There was an issue parsing your resume.</span>
+                    <p class="mt-2 mb-0">Please try again or continue to manually edit your profile.</p>
+                </div>
+            </div>
+            
             <div class="mt-4">
                 <button type="submit" id="upload-button" class="btn btn-primary btn-lg" disabled>
                     Continue to Profile
@@ -128,7 +142,7 @@
             </div>
         </form>
         
-        <a href="{{ url_for('profile.profile') }}" class="skip-link">Skip this step and build profile manually</a>
+        <a href="{{ url_for('profile.profile') }}?skip=true" class="skip-link">Skip this step and build profile manually</a>
     </div>
 </div>
 {% endblock %}
@@ -145,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadButton = document.getElementById('upload-button');
     const uploadForm = document.getElementById('resume-upload-form');
     const parsingStatus = document.getElementById('parsing-status');
+    const parsingError = document.getElementById('parsing-error');
     
     // Handle click on browse button
     browseButton.addEventListener('click', function() {
@@ -195,21 +210,38 @@ document.addEventListener('DOMContentLoaded', function() {
             fileNameDisplay.textContent = file.name;
             uploadPreview.style.display = 'block';
             uploadButton.disabled = false;
+            
+            // Hide error message if it was shown previously
+            parsingError.style.display = 'none';
         }
     }
     
     // Handle remove button click
-    removeFileButton.addEventListener('click', function() {
+    removeFileButton.addEventListener('click', function(e) {
+        e.preventDefault();
         resumeFileInput.value = '';
         uploadPreview.style.display = 'none';
         uploadButton.disabled = true;
     });
     
-    // Handle form submission
+    // Handle form submission with timeout
     uploadForm.addEventListener('submit', function(e) {
         if (resumeFileInput.files.length) {
             parsingStatus.style.display = 'block';
             uploadButton.disabled = true;
+            
+            // Set timeout to show error if parsing takes too long
+            setTimeout(function() {
+                // If form hasn't been submitted successfully by now, show error
+                if (parsingStatus.style.display === 'block') {
+                    parsingStatus.style.display = 'none';
+                    parsingError.style.display = 'block';
+                    uploadButton.disabled = false;
+                    
+                    // Prevent automatic form submission after timeout
+                    e.preventDefault();
+                }
+            }, 30000); // 30 seconds timeout
         }
     });
 });
