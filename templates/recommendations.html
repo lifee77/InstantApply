@@ -1,509 +1,433 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Recommendations - InstantApply</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <header>
-        <h1>InstantApply</h1>
-        <p>Automated Job Application Assistant</p>
-        <nav>
-            <a href="/">Home</a> | 
-            <a href="/profile">Profile</a> |
-            <a href="/applications">My Applications</a> |
-            <a href="/recommendations">Recommendations</a> |
-            <a href="/logout">Logout</a>
-        </nav>
-    </header>
+{% extends "base.html" %}
+
+{% block title %}Job Recommendations{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Job Recommendations</h2>
     
-    <main>
-        <section class="recommendations-section">
-            <h2>Job Recommendations</h2>
-            <p>300 jobs matched to your profile and skills</p>
-            
-            <div class="filter-section">
-                <div class="search-filter">
-                    <input type="text" id="search-input" placeholder="Search by title, company, or keywords">
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-3">
+                <div>
+                    <h5 class="card-title">Recommended Jobs</h5>
+                    <p class="text-muted">Jobs matched to your profile and preferences</p>
                 </div>
-                <div class="match-filter">
-                    <label for="match-filter">Match Score:</label>
-                    <select id="match-filter">
-                        <option value="all">All Matches</option>
-                        <option value="90">90%+ Match</option>
-                        <option value="75">75%+ Match</option>
-                        <option value="50">50%+ Match</option>
-                    </select>
+                <div>
+                    <button id="refreshRecommendations" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Refresh Recommendations
+                    </button>
                 </div>
-                <div class="sort-options">
-                    <label for="sort-by">Sort By:</label>
-                    <select id="sort-by">
-                        <option value="match">Match Score</option>
-                        <option value="company">Company</option>
-                        <option value="title">Job Title</option>
-                    </select>
-                </div>
-                <button id="refresh-recommendations" class="action-button">Refresh Recommendations</button>
             </div>
             
-            <div class="loading" id="loading-indicator">
-                <p>Loading recommendations...</p>
+            <div class="mb-3">
+                <div class="input-group">
+                    <input type="text" id="jobSearchInput" class="form-control" placeholder="Search in recommendations...">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
             
-            <div id="recommendations-container">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <select id="sortOptions" class="form-control">
+                        <option value="match_score_desc">Match Score (High to Low)</option>
+                        <option value="match_score_asc">Match Score (Low to High)</option>
+                        <option value="date_desc">Date (Newest First)</option>
+                        <option value="date_asc">Date (Oldest First)</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="locationFilter" class="form-control">
+                        <option value="">All Locations</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="companyFilter" class="form-control">
+                        <option value="">All Companies</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            
+            <div id="recommendationsLoader" class="text-center py-4 d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading recommendations...</p>
+            </div>
+            
+            <div id="recommendationsContainer">
                 <!-- Job recommendations will be loaded here -->
+                <div class="text-center py-4 d-none" id="noRecommendations">
+                    <p>No job recommendations found. Click "Refresh Recommendations" to generate new ones.</p>
+                </div>
+                
+                <div id="recommendationsList" class="list-group">
+                    <!-- Job recommendations will be populated here -->
+                </div>
             </div>
             
-            <div class="pagination">
-                <button id="prev-page" disabled>Previous</button>
-                <span id="page-info">Page 1 of 1</span>
-                <button id="next-page">Next</button>
+            <div class="d-flex justify-content-between mt-4">
+                <div>
+                    <span id="showingCount">Showing 0 of 0 recommendations</span>
+                </div>
+                <div>
+                    <nav aria-label="Recommendations pagination">
+                        <ul class="pagination" id="recommendationsPagination">
+                            <!-- Pagination will be populated here -->
+                        </ul>
+                    </nav>
+                </div>
             </div>
-        </section>
-    </main>
-    
-    <footer>
-        <p>&copy; 2023-2025 InstantApply</p>
-    </footer>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const recommendationsContainer = document.getElementById('recommendations-container');
-            const loadingIndicator = document.getElementById('loading-indicator');
-            const searchInput = document.getElementById('search-input');
-            const matchFilter = document.getElementById('match-filter');
-            const sortBy = document.getElementById('sort-by');
-            const refreshButton = document.getElementById('refresh-recommendations');
-            const prevPageButton = document.getElementById('prev-page');
-            const nextPageButton = document.getElementById('next-page');
-            const pageInfo = document.getElementById('page-info');
+        </div>
+    </div>
+</div>
+
+<!-- Job recommendation template -->
+<template id="job-recommendation-template">
+    <div class="list-group-item recommendation-item">
+        <div class="d-flex justify-content-between">
+            <div>
+                <h5 class="mb-1 job-title"></h5>
+                <div class="d-flex mb-2">
+                    <span class="mr-3 company-name"></span>
+                    <span class="text-muted job-location"></span>
+                </div>
+                <p class="mb-1 job-description"></p>
+                <div class="mt-2">
+                    <span class="badge badge-primary match-score"></span>
+                    <span class="badge badge-light job-date"></span>
+                </div>
+            </div>
+            <div class="ml-3 d-flex flex-column justify-content-between align-items-end">
+                <div>
+                    <button class="btn btn-sm btn-success apply-btn">
+                        <i class="fas fa-paper-plane"></i> Apply
+                    </button>
+                </div>
+                <div class="mt-auto">
+                    <a href="#" class="btn btn-sm btn-outline-secondary view-job-details">
+                        <i class="fas fa-external-link-alt"></i> View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Variables
+        const recommendationsList = document.getElementById('recommendationsList');
+        const recommendationsLoader = document.getElementById('recommendationsLoader');
+        const noRecommendations = document.getElementById('noRecommendations');
+        const showingCount = document.getElementById('showingCount');
+        const refreshButton = document.getElementById('refreshRecommendations');
+        const jobSearchInput = document.getElementById('jobSearchInput');
+        const sortOptions = document.getElementById('sortOptions');
+        const locationFilter = document.getElementById('locationFilter');
+        const companyFilter = document.getElementById('companyFilter');
+        const paginationContainer = document.getElementById('recommendationsPagination');
+        const template = document.getElementById('job-recommendation-template');
+        
+        // Recommendation data
+        let allRecommendations = [];
+        let filteredRecommendations = [];
+        const itemsPerPage = 10;
+        let currentPage = 1;
+        
+        // Initialize the recommendations
+        loadRecommendations();
+        
+        // Event listeners
+        refreshButton.addEventListener('click', refreshRecommendations);
+        jobSearchInput.addEventListener('input', filterRecommendations);
+        sortOptions.addEventListener('change', sortRecommendations);
+        locationFilter.addEventListener('change', filterRecommendations);
+        companyFilter.addEventListener('change', filterRecommendations);
+        
+        // Functions
+        function loadRecommendations() {
+            showLoader();
             
-            let allRecommendations = [];
-            let filteredRecommendations = [];
-            let currentPage = 1;
-            const itemsPerPage = 20;
-            
-            // Load all recommendations
-            function loadRecommendations() {
-                loadingIndicator.style.display = 'block';
-                recommendationsContainer.style.display = 'none';
-                
-                fetch('/api/recommendations')
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        allRecommendations = data;
-                        applyFiltersAndSort();
-                        loadingIndicator.style.display = 'none';
-                        recommendationsContainer.style.display = 'block';
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        loadingIndicator.style.display = 'none';
-                        recommendationsContainer.innerHTML = '<p class="error-message">An error occurred while fetching recommendations. Please try again later.</p>';
-                        recommendationsContainer.style.display = 'block';
-                    });
-            }
-            
-            // Apply filters and sorting
-            function applyFiltersAndSort() {
-                // Filter by search term
-                const searchTerm = searchInput.value.toLowerCase();
-                
-                // Filter by match score
-                const matchScore = matchFilter.value === 'all' ? 0 : parseInt(matchFilter.value, 10);
-                
-                filteredRecommendations = allRecommendations.filter(job => {
-                    const matchesSearch = searchTerm === '' || 
-                        job.title.toLowerCase().includes(searchTerm) ||
-                        job.company.toLowerCase().includes(searchTerm) ||
-                        (job.description_snippet && job.description_snippet.toLowerCase().includes(searchTerm));
-                    
-                    const matchesScore = job.match_score >= matchScore;
-                    
-                    return matchesSearch && matchesScore;
-                });
-                
-                // Sort recommendations
-                const sortOption = sortBy.value;
-                filteredRecommendations.sort((a, b) => {
-                    if (sortOption === 'match') {
-                        return b.match_score - a.match_score;
-                    } else if (sortOption === 'company') {
-                        return a.company.localeCompare(b.company);
-                    } else if (sortOption === 'title') {
-                        return a.title.localeCompare(b.title);
-                    }
-                    return 0;
-                });
-                
-                // Update pagination
-                const totalPages = Math.ceil(filteredRecommendations.length / itemsPerPage);
-                currentPage = Math.min(currentPage, totalPages) || 1;
-                prevPageButton.disabled = currentPage === 1;
-                nextPageButton.disabled = currentPage === totalPages;
-                pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-                
-                renderPage();
-            }
-            
-            // Render current page of recommendations
-            function renderPage() {
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const pageItems = filteredRecommendations.slice(startIndex, endIndex);
-                
-                if (pageItems.length === 0) {
-                    recommendationsContainer.innerHTML = '<div class="empty-state"><p>No jobs match your current filters.</p></div>';
-                    return;
-                }
-                
-                let html = '';
-                
-                pageItems.forEach(job => {
-                    const matchColor = getMatchScoreColor(job.match_score);
-                    
-                    html += `
-                        <div class="job-card">
-                            <div class="job-header">
-                                <h3 class="job-title">${job.title}</h3>
-                                <span class="match-score" style="background-color: ${matchColor}">${job.match_score}% Match</span>
-                            </div>
-                            <div class="job-company">${job.company}</div>
-                            <div class="job-location">${job.location || 'Location not specified'}</div>
-                            <div class="job-description">${job.description_snippet || 'No description available'}</div>
-                            <div class="job-footer">
-                                <div class="matching-skills">
-                                    <strong>Matching Skills:</strong>
-                                    <div class="skill-tags">
-                                        ${(job.matching_skills || []).map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
-                                    </div>
-                                </div>
-                                <div class="job-actions">
-                                    <a href="${job.url}" class="job-link" target="_blank">View Job</a>
-                                    <button class="apply-button" data-job-id="${job.id}">Apply</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                recommendationsContainer.innerHTML = html;
-                
-                // Add event listeners for apply buttons
-                document.querySelectorAll('.apply-button').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const jobId = this.getAttribute('data-job-id');
-                        applyToJob(jobId);
-                    });
-                });
-            }
-            
-            // Helper function to get color for match score
-            function getMatchScoreColor(score) {
-                if (score >= 90) return '#d4edda'; // Green
-                if (score >= 75) return '#fff3cd'; // Yellow
-                if (score >= 50) return '#cce5ff'; // Blue
-                return '#f8d7da'; // Red
-            }
-            
-            // Apply to job function
-            function applyToJob(jobId) {
-                const job = allRecommendations.find(j => j.id === jobId);
-                if (!job) return;
-                
-                fetch('/api/apply', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ job_id: jobId })
-                })
+            fetch('/api/recommendations')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        alert('Application submitted successfully!');
-                    } else {
-                        alert('Failed to submit application: ' + data.message);
-                    }
+                    allRecommendations = data.recommendations || [];
+                    populateFilters();
+                    filterRecommendations();
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while submitting your application.');
+                    console.error('Error loading recommendations:', error);
+                    hideLoader();
+                    showNoRecommendations();
                 });
-            }
+        }
+        
+        function refreshRecommendations() {
+            showLoader();
             
-            // Refresh recommendations
-            refreshButton.addEventListener('click', function() {
-                loadingIndicator.style.display = 'block';
-                recommendationsContainer.style.display = 'none';
+            fetch('/api/recommendations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadRecommendations();
+                } else {
+                    console.error('Failed to refresh recommendations');
+                    hideLoader();
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing recommendations:', error);
+                hideLoader();
+            });
+        }
+        
+        function filterRecommendations() {
+            const searchTerm = jobSearchInput.value.toLowerCase();
+            const selectedLocation = locationFilter.value.toLowerCase();
+            const selectedCompany = companyFilter.value.toLowerCase();
+            
+            filteredRecommendations = allRecommendations.filter(job => {
+                const matchesSearch = !searchTerm || 
+                    job.title.toLowerCase().includes(searchTerm) || 
+                    job.company.toLowerCase().includes(searchTerm) || 
+                    job.description.toLowerCase().includes(searchTerm);
                 
-                fetch('/api/recommendations', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        loadRecommendations();
-                    } else {
-                        throw new Error(data.message || 'Failed to refresh recommendations');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    loadingIndicator.style.display = 'none';
-                    recommendationsContainer.innerHTML = '<p class="error-message">An error occurred while refreshing recommendations: ' + error.message + '</p>';
-                    recommendationsContainer.style.display = 'block';
-                });
+                const matchesLocation = !selectedLocation || 
+                    job.location.toLowerCase() === selectedLocation;
+                
+                const matchesCompany = !selectedCompany || 
+                    job.company.toLowerCase() === selectedCompany;
+                
+                return matchesSearch && matchesLocation && matchesCompany;
             });
             
-            // Add event listeners
-            searchInput.addEventListener('input', applyFiltersAndSort);
-            matchFilter.addEventListener('change', applyFiltersAndSort);
-            sortBy.addEventListener('change', applyFiltersAndSort);
+            sortRecommendations();
+        }
+        
+        function sortRecommendations() {
+            const sortOption = sortOptions.value;
             
-            // Pagination event listeners
-            prevPageButton.addEventListener('click', function() {
+            filteredRecommendations.sort((a, b) => {
+                switch (sortOption) {
+                    case 'match_score_desc':
+                        return b.match_score - a.match_score;
+                    case 'match_score_asc':
+                        return a.match_score - b.match_score;
+                    case 'date_desc':
+                        return new Date(b.date_posted) - new Date(a.date_posted);
+                    case 'date_asc':
+                        return new Date(a.date_posted) - new Date(b.date_posted);
+                    default:
+                        return b.match_score - a.match_score;
+                }
+            });
+            
+            currentPage = 1;
+            renderRecommendations();
+        }
+        
+        function renderRecommendations() {
+            recommendationsList.innerHTML = '';
+            
+            if (filteredRecommendations.length === 0) {
+                showNoRecommendations();
+                return;
+            }
+            
+            hideNoRecommendations();
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(filteredRecommendations.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredRecommendations.length);
+            const pageRecommendations = filteredRecommendations.slice(startIndex, endIndex);
+            
+            // Update showing count
+            showingCount.textContent = `Showing ${startIndex + 1}-${endIndex} of ${filteredRecommendations.length} recommendations`;
+            
+            // Render recommendations
+            pageRecommendations.forEach(job => {
+                const recommendationElement = template.content.cloneNode(true);
+                
+                recommendationElement.querySelector('.job-title').textContent = job.title;
+                recommendationElement.querySelector('.company-name').textContent = job.company;
+                recommendationElement.querySelector('.job-location').textContent = job.location;
+                recommendationElement.querySelector('.job-description').textContent = job.description || 'No description available';
+                recommendationElement.querySelector('.match-score').textContent = `Match: ${Math.round(job.match_score * 100)}%`;
+                recommendationElement.querySelector('.job-date').textContent = formatDate(job.date_posted);
+                
+                const viewDetailsLink = recommendationElement.querySelector('.view-job-details');
+                viewDetailsLink.href = job.url;
+                viewDetailsLink.target = '_blank';
+                
+                const applyButton = recommendationElement.querySelector('.apply-btn');
+                applyButton.addEventListener('click', () => initiateApplication(job.id));
+                
+                recommendationsList.appendChild(recommendationElement);
+            });
+            
+            renderPagination(totalPages);
+            hideLoader();
+        }
+        
+        function renderPagination(totalPages) {
+            paginationContainer.innerHTML = '';
+            
+            if (totalPages <= 1) {
+                return;
+            }
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.textContent = 'Previous';
+            prevLink.addEventListener('click', (e) => {
+                e.preventDefault();
                 if (currentPage > 1) {
                     currentPage--;
-                    applyFiltersAndSort();
+                    renderRecommendations();
                 }
             });
+            prevLi.appendChild(prevLink);
+            paginationContainer.appendChild(prevLi);
             
-            nextPageButton.addEventListener('click', function() {
-                const totalPages = Math.ceil(filteredRecommendations.length / itemsPerPage);
+            // Page numbers
+            const maxPagesToShow = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+            
+            if (endPage - startPage + 1 < maxPagesToShow) {
+                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = i;
+                pageLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage = i;
+                    renderRecommendations();
+                });
+                pageLi.appendChild(pageLink);
+                paginationContainer.appendChild(pageLi);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.textContent = 'Next';
+            nextLink.addEventListener('click', (e) => {
+                e.preventDefault();
                 if (currentPage < totalPages) {
                     currentPage++;
-                    applyFiltersAndSort();
+                    renderRecommendations();
                 }
             });
-            
-            // Load recommendations on page load
-            loadRecommendations();
-        });
-    </script>
-    
-    <style>
-        .recommendations-section {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            nextLi.appendChild(nextLink);
+            paginationContainer.appendChild(nextLi);
         }
         
-        .filter-section {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-        }
-        
-        .search-filter {
-            flex: 2;
-            min-width: 200px;
-        }
-        
-        .match-filter,
-        .sort-options {
-            flex: 1;
-            min-width: 150px;
-        }
-        
-        .filter-section input,
-        .filter-section select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .filter-section label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .action-button {
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            align-self: flex-end;
-        }
-        
-        .action-button:hover {
-            background-color: #45a049;
-        }
-        
-        .job-card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .job-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .job-title {
-            margin: 0;
-            font-size: 1.2rem;
-            flex: 1;
-        }
-        
-        .match-score {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-weight: bold;
-            text-align: center;
-        }
-        
-        .job-company {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .job-location {
-            color: #666;
-            margin-bottom: 10px;
-        }
-        
-        .job-description {
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-        
-        .job-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .matching-skills {
-            flex: 2;
-        }
-        
-        .skill-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 5px;
-        }
-        
-        .skill-tag {
-            background-color: #e0e0e0;
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-        
-        .job-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .job-link,
-        .apply-button {
-            padding: 8px 16px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
-            display: inline-block;
-        }
-        
-        .job-link {
-            background-color: #f0f0f0;
-            color: #333;
-        }
-        
-        .apply-button {
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .apply-button:hover {
-            background-color: #3367d6;
-        }
-        
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 20px;
-            gap: 15px;
-        }
-        
-        .pagination button {
-            padding: 8px 15px;
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        .pagination button:disabled {
-            background-color: #e0e0e0;
-            cursor: not-allowed;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            font-style: italic;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-        }
-        
-        .error-message {
-            color: #721c24;
-            background-color: #f8d7da;
-            padding: 15px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        
-        @media (max-width: 768px) {
-            .job-footer {
-                flex-direction: column;
+        function populateFilters() {
+            // Clear existing options except the first one
+            while (locationFilter.options.length > 1) {
+                locationFilter.remove(1);
+            }
+            while (companyFilter.options.length > 1) {
+                companyFilter.remove(1);
             }
             
-            .filter-section {
-                flex-direction: column;
-            }
+            // Get unique locations and companies
+            const locations = new Set();
+            const companies = new Set();
+            
+            allRecommendations.forEach(job => {
+                if (job.location) locations.add(job.location);
+                if (job.company) companies.add(job.company);
+            });
+            
+            // Add options to filters
+            [...locations].sort().forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                locationFilter.appendChild(option);
+            });
+            
+            [...companies].sort().forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                companyFilter.appendChild(option);
+            });
         }
-    </style>
-</body>
-</html>
+        
+        function initiateApplication(jobId) {
+            // Redirect to application page or open application modal
+            window.location.href = `/applications/apply?job_id=${jobId}`;
+        }
+        
+        function showLoader() {
+            recommendationsLoader.classList.remove('d-none');
+            recommendationsList.classList.add('d-none');
+            noRecommendations.classList.add('d-none');
+        }
+        
+        function hideLoader() {
+            recommendationsLoader.classList.add('d-none');
+            recommendationsList.classList.remove('d-none');
+        }
+        
+        function showNoRecommendations() {
+            noRecommendations.classList.remove('d-none');
+            recommendationsList.classList.add('d-none');
+        }
+        
+        function hideNoRecommendations() {
+            noRecommendations.classList.add('d-none');
+            recommendationsList.classList.remove('d-none');
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'No date';
+            
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Invalid date';
+            
+            // Calculate relative time
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            
+            // Format as MM/DD/YYYY for older dates
+            return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+        }
+    });
+</script>
+{% endblock %}
