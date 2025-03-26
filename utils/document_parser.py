@@ -4,11 +4,16 @@ import tempfile
 import base64
 import uuid
 import shutil
+import json
 from typing import Tuple, Optional, List, Dict, Any
 from werkzeug.utils import secure_filename
 from flask import current_app
 import spacy
 import re
+# Import Google Generative AI for PDF parsing
+from google import generativeai as genai
+from google.generativeai import types
+import io
 # PDF parsing
 try:
     import PyPDF2
@@ -23,8 +28,16 @@ try:
 except ImportError:
     HAS_DOCX = False
 
-logger = logging.getLogger(__name__)
+# Configure the Gemini API
+import os
+from dotenv import load_dotenv
+# Load environment variables
+load_dotenv()
+# Configure API Key
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+genai.configure(api_key=GEMINI_API_KEY)
 
+logger = logging.getLogger(__name__)
 # Load spaCy model only once when module is imported
 try:
     nlp = spacy.load("en_core_web_sm")
@@ -381,22 +394,225 @@ def parse_and_save_resume(data_uri: str, user_id: int) -> Tuple[str, str, str, s
         logger.error(f"Error processing resume: {str(e)}")
         return f"[Error processing resume: {str(e)}]", "", "", ""
 
-def parse_pdf(filepath: str) -> str:
-    """Extract text from a PDF file"""
-    if not HAS_PYPDF2:
-        return "[Error: PDF parsing library not available]"
+# Gemini API implementation for PDF parsing
+def parse_pdf_with_gemini(filepath: str) -> dict:
+    """
+    Parse PDF document using Gemini API's document processing capabilities
+    
+    Args:
+        filepath: Path to the PDF file
         
+    Returns:
+        Dictionary with parsed resume data
+    """
     try:
-        text = ""
+        # Create a Gemini client
+        client = genai.Client()
+        
+        # Read the PDF file
         with open(filepath, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            for page_num in range(len(pdf_reader.pages)):
-                page = pdf_reader.pages[page_num]
-                text += page.extract_text() + "\n"
-        return text
+            pdf_data = file.read()
+        
+        # Create a prompt for resume parsing
+        prompt = """
+        You are an expert resume parser. Please extract the following information from this resume:
+        - Name
+        - Email
+        - Phone
+        - LinkedIn URL
+        - GitHub URL
+        - Location
+        - Skills (list)
+        - Experience (list of objects with title, company, period, description)
+        - Education (list)
+        - Projects (list of objects with name, description)
+        - Certifications (list)
+        - Languages (list)
+        - Professional Summary
+        - Job Titles (list of relevant positions)
+        
+        Format your response as a valid JSON object with these fields. Extract as much information as possible from the document.
+        """
+        
+        # Generate content using Gemini API
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",  # Using the flash model for speed
+            contents=[
+                types.Part.from_bytes(data=pdf_data, mime_type="application/pdf"),
+                prompt
+            ]
+        )
+        
+        # Extract the response text
+        response_text = response.text
+        
+        # Try to parse the JSON from the response
+        try:
+            # Find JSON content within the response (in case there's surrounding text)
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                parsed_data = json.loads(json_str)
+            else:
+                # If JSON markers not found, try to parse the whole response
+                parsed_data = json.loads(response_text)
+                
+            logger.info("Successfully parsed resume with Gemini API")
+            return parsed_data
+            
+        except json.JSONDecodeError:
+            logger.error("Failed to parse JSON response from Gemini API")
+            
+            # Fallback: try to extract structured information even if not proper JSON
+            # This creates a basic structured result from the text response
+            parsed = {
+                "name": None,
+                "email": None,
+                "phone": None,
+                "linkedin": None,
+                "github": None,
+                "location": None,
+                "skills": [],
+                "experience": [],
+                "projects": [],
+                "education": [],
+                "certifications": [],
+                "languages": [],
+                "job_titles": [],
+                "professional_summary": response_text[:500] if response_text else None
+            }
+            
+            # Try to extract email
+            email_match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', response_text)
+            if email_match:
+                parsed["email"] = email_match.group(0)
+            
+            return parsed
+            
+    except Exception as e:
+        logger.error(f"Error parsing PDF with Gemini API: {str(e)}")
+        # Return empty structure in case of error
+        return {
+            "name": None,
+            "email": None,
+            "phone": None,
+            "linkedin": None,
+            "github": None,
+            "location": None,
+            "skills": [],
+            "experience": [],
+            "projects": [],
+            "education": [],
+            "certifications": [],
+            "languages": [],
+            "job_titles": [],
+            "professional_summary": f"[Error parsing with Gemini API: {str(e)}]"
+        }
+
+# Update the parse_pdf function to use Gemini API
+def parse_pdf(filepath: str) -> str:
+    """Extract text from a PDF file using available methods"""
+    try:
+        # First try parsing with Gemini API and convert to text format for backward compatibility
+        gemini_parsed = parse_pdf_with_gemini(filepath)
+        
+        # Convert the structured data back to text for compatibility with existing code
+        # This ensures the function still returns a string as expected by other parts of the code
+        if gemini_parsed and any(gemini_parsed.values()):
+            # Format the parsed data as text
+            text_parts = []
+            
+            if gemini_parsed.get("name"):
+                text_parts.append(gemini_parsed["name"])
+            
+            if gemini_parsed.get("email"):
+                text_parts.append(f"Email: {gemini_parsed['email']}")
+                
+            if gemini_parsed.get("phone"):
+                text_parts.append(f"Phone: {gemini_parsed['phone']}")
+                
+            if gemini_parsed.get("linkedin"):
+                text_parts.append(f"LinkedIn: {gemini_parsed['linkedin']}")
+                
+            if gemini_parsed.get("github"):
+                text_parts.append(f"GitHub: {gemini_parsed['github']}")
+                
+            if gemini_parsed.get("location"):
+                text_parts.append(f"Location: {gemini_parsed['location']}")
+                
+            if gemini_parsed.get("professional_summary"):
+                text_parts.append("\nSUMMARY")
+                text_parts.append(gemini_parsed["professional_summary"])
+                
+            if gemini_parsed.get("skills"):
+                text_parts.append("\nSKILLS")
+                text_parts.append(", ".join(gemini_parsed["skills"]))
+                
+            if gemini_parsed.get("experience"):
+                text_parts.append("\nEXPERIENCE")
+                for exp in gemini_parsed["experience"]:
+                    title = exp.get("title", "")
+                    company = exp.get("company", "")
+                    period = exp.get("period", "")
+                    description = exp.get("description", "")
+                    exp_text = f"{title} at {company}\n{period}\n{description}\n"
+                    text_parts.append(exp_text)
+                    
+            if gemini_parsed.get("education"):
+                text_parts.append("\nEDUCATION")
+                for edu in gemini_parsed["education"]:
+                    text_parts.append(edu)
+                    
+            if gemini_parsed.get("projects"):
+                text_parts.append("\nPROJECTS")
+                for project in gemini_parsed["projects"]:
+                    name = project.get("name", "")
+                    description = project.get("description", "")
+                    text_parts.append(f"{name}\n{description}\n")
+                    
+            if gemini_parsed.get("certifications"):
+                text_parts.append("\nCERTIFICATIONS")
+                for cert in gemini_parsed["certifications"]:
+                    text_parts.append(cert)
+                    
+            if gemini_parsed.get("languages"):
+                text_parts.append("\nLANGUAGES")
+                text_parts.append(", ".join(gemini_parsed["languages"]))
+                
+            return "\n".join(text_parts)
+            
+        # Fallback to PyPDF2 if Gemini parsing failed or returned empty results
+        if HAS_PYPDF2:
+            text = ""
+            with open(filepath, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page_num in range(len(pdf_reader.pages)):
+                    page = pdf_reader.pages[page_num]
+                    text += page.extract_text() + "\n"
+            return text
+        else:
+            return "[Error: PDF parsing library not available]"
+            
     except Exception as e:
         logger.error(f"Error parsing PDF: {str(e)}")
         return f"[Error parsing PDF: {str(e)}]"
+        
+# Add a function to directly get structured data from PDF for new code
+def get_structured_resume_data(filepath: str) -> dict:
+    """
+    Parse a resume PDF and return structured data directly
+    This is a more modern approach for new code that expects structured data
+    
+    Args:
+        filepath: Path to the PDF file
+        
+    Returns:
+        Dictionary with structured resume data
+    """
+    # Use Gemini API for parsing
+    return parse_pdf_with_gemini(filepath)
 
 def parse_docx(filepath: str) -> str:
     """Extract text from a DOCX file"""
