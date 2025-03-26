@@ -10,7 +10,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_key_for_development')
 DEBUG = os.environ.get('FLASK_DEBUG', True)
 
 # Database settings
-SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///instant_apply.db')
+SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///instant_apply_new.db')
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # Indeed scraping settings

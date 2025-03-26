@@ -1,0 +1,37 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4>Skills & Experience</h4>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="user-skills" class="form-label">Skills</label>
+            <textarea id="user-skills" name="skills" class="form-control" rows="3" placeholder="List your skills, separated by commas">{{ current_user.skills or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="user-experience" class="form-label">Experience</label>
+            <textarea id="user-experience" name="experience" class="form-control" rows="5" placeholder="Describe your work experience">{{ current_user.experience or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="desired_job_titles" class="form-label">Desired Job Titles</label>
+            <div id="job-titles-container">
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control job-title" placeholder="e.g., Software Engineer">
+                    <button type="button" class="btn btn-outline-secondary remove-job-title">Remove</button>
+                </div>
+            </div>
+            <button type="button" id="add-job-title" class="btn btn-secondary btn-sm mt-2">+ Add Another Title</button>
+            <input type="hidden" name="desired_job_titles" id="desired_job_titles_json">
+        </div>
+        <div class="mb-3">
+            <label for="portfolio_links" class="form-label">Portfolio Links</label>
+            <div id="portfolio-links-container">
+                <div class="input-group mb-2">
+                    <input type="url" class="form-control portfolio-link" placeholder="https://github.com/yourusername">
+                    <button type="button" class="btn btn-outline-secondary remove-portfolio-link">Remove</button>
+                </div>
+            </div>
+            <button type="button" id="add-portfolio-link" class="btn btn-secondary btn-sm mt-2">+ Add Another Link</button>
+            <input type="hidden" name="portfolio_links" id="portfolio_links_json">
+        </div>
+    </div>
+</div>

@@ -1,0 +1,27 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h3>Career Information</h3>
+    </div>
+    <div class="card-body">
+        {% if current_user.career_goals %}
+            <p><strong>Career Goals:</strong> {{ current_user.career_goals }}</p>
+        {% endif %}
+        {% if current_user.biggest_achievement %}
+            <p><strong>Biggest Achievement:</strong> {{ current_user.biggest_achievement }}</p>
+        {% endif %}
+        {% if current_user.work_style %}
+            <p><strong>Work Style:</strong> {{ current_user.work_style }}</p>
+        {% endif %}
+        {% if current_user.industry_attraction %}
+            <p><strong>Industry Attraction:</strong> {{ current_user.industry_attraction }}</p>
+        {% endif %}
+        {% if current_user.applicant_values %}
+            <h4>Professional Values</h4>
+            <ul>
+                {% for value in current_user.applicant_values %}
+                    <li>{{ value }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>
