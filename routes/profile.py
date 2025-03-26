@@ -216,26 +216,22 @@ def extract_text_from_resume(file_path):
 
 def process_resume_file(file):
     """Process an uploaded resume file, extract text, and auto-fill fields."""
-    from utils.document_parser import parse_resume_with_spacy  # import inside function to avoid circular imports
+    from utils.document_parser import parse_pdf  # Use parse_pdf which includes Gemini integration
     
     filename = secure_filename(file.filename)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_filename = f"{timestamp}_{filename}"
-
     # Ensure upload folder exists
     upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
     os.makedirs(upload_folder, exist_ok=True)
-
     file_path = os.path.join(upload_folder, unique_filename)
     file.save(file_path)
-
     # Extract text from the file
     resume_text = extract_text_from_resume(file_path)
     
-    # Parse resume to auto-fill user profile fields
-    parsed_data = parse_resume_with_spacy(resume_text)
+    # Parse resume using the updated parse_pdf function that uses Gemini first
+    parsed_data = parse_pdf(file_path)
     current_app.logger.info(f"Auto-filled data: {parsed_data}")
-
     # Auto-fill fields into current_user with better structure for experience
     if parsed_data.get("name"):
         current_user.name = parsed_data["name"]
@@ -276,5 +272,4 @@ def process_resume_file(file):
     # If we have job titles from the resume, use them
     if parsed_data.get("job_titles"):
         current_user.desired_job_titles = parsed_data["job_titles"]
-
     return file_path, filename, resume_text
