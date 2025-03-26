@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Recommendations - InstantApply</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>InstantApply</h1>
+        <p>Automated Job Application Assistant</p>
+        <nav>
+            <a href="/">Home</a> | 
+            <a href="/profile">Profile</a> |
+            <a href="/applications">My Applications</a> |
+            <a href="/recommendations">Recommendations</a> |
+            <a href="/logout">Logout</a>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="recommendations-section">
+            <h2>Job Recommendations</h2>
+            <p>300 jobs matched to your profile and skills</p>
+            
+            <div class="filter-section">
+                <div class="search-filter">
+                    <input type="text" id="search-input" placeholder="Search by title, company, or keywords">
+                </div>
+                <div class="match-filter">
+                    <label for="match-filter">Match Score:</label>
+                    <select id="match-filter">
+                        <option value="all">All Matches</option>
+                        <option value="90">90%+ Match</option>
+                        <option value="75">75%+ Match</option>
+                        <option value="50">50%+ Match</option>
+                    </select>
+                </div>
+                <div class="sort-options">
+                    <label for="sort-by">Sort By:</label>
+                    <select id="sort-by">
+                        <option value="match">Match Score</option>
+                        <option value="company">Company</option>
+                        <option value="title">Job Title</option>
+                    </select>
+                </div>
+                <button id="refresh-recommendations" class="action-button">Refresh Recommendations</button>
+            </div>
+            
+            <div class="loading" id="loading-indicator">
+                <p>Loading recommendations...</p>
+            </div>
+            
+            <div id="recommendations-container">
+                <!-- Job recommendations will be loaded here -->
+            </div>
+            
+            <div class="pagination">
+                <button id="prev-page" disabled>Previous</button>
+                <span id="page-info">Page 1 of 1</span>
+                <button id="next-page">Next</button>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023-2025 InstantApply</p>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const recommendationsContainer = document.getElementById('recommendations-container');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const searchInput = document.getElementById('search-input');
+            const matchFilter = document.getElementById('match-filter');
+            const sortBy = document.getElementById('sort-by');
+            const refreshButton = document.getElementById('refresh-recommendations');
+            const prevPageButton = document.getElementById('prev-page');
+            const nextPageButton = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            
+            let allRecommendations = [];
+            let filteredRecommendations = [];
+            let currentPage = 1;
+            const itemsPerPage = 20;
+            
+            // Load all recommendations
+            function loadRecommendations() {
+                loadingIndicator.style.display = 'block';
+                recommendationsContainer.style.display = 'none';
+                
+                fetch('/api/recommendations')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        allRecommendations = data;
+                        applyFiltersAndSort();
+                        loadingIndicator.style.display = 'none';
+                        recommendationsContainer.style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        loadingIndicator.style.display = 'none';
+                        recommendationsContainer.innerHTML = '<p class="error-message">An error occurred while fetching recommendations. Please try again later.</p>';
+                        recommendationsContainer.style.display = 'block';
+                    });
+            }
+            
+            // Apply filters and sorting
+            function applyFiltersAndSort() {
+                // Filter by search term
+                const searchTerm = searchInput.value.toLowerCase();
+                
+                // Filter by match score
+                const matchScore = matchFilter.value === 'all' ? 0 : parseInt(matchFilter.value, 10);
+                
+                filteredRecommendations = allRecommendations.filter(job => {
+                    const matchesSearch = searchTerm === '' || 
+                        job.title.toLowerCase().includes(searchTerm) ||
+                        job.company.toLowerCase().includes(searchTerm) ||
+                        (job.description_snippet && job.description_snippet.toLowerCase().includes(searchTerm));
+                    
+                    const matchesScore = job.match_score >= matchScore;
+                    
+                    return matchesSearch && matchesScore;
+                });
+                
+                // Sort recommendations
+                const sortOption = sortBy.value;
+                filteredRecommendations.sort((a, b) => {
+                    if (sortOption === 'match') {
+                        return b.match_score - a.match_score;
+                    } else if (sortOption === 'company') {
+                        return a.company.localeCompare(b.company);
+                    } else if (sortOption === 'title') {
+                        return a.title.localeCompare(b.title);
+                    }
+                    return 0;
+                });
+                
+                // Update pagination
+                const totalPages = Math.ceil(filteredRecommendations.length / itemsPerPage);
+                currentPage = Math.min(currentPage, totalPages) || 1;
+                prevPageButton.disabled = currentPage === 1;
+                nextPageButton.disabled = currentPage === totalPages;
+                pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                
+                renderPage();
+            }
+            
+            // Render current page of recommendations
+            function renderPage() {
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const pageItems = filteredRecommendations.slice(startIndex, endIndex);
+                
+                if (pageItems.length === 0) {
+                    recommendationsContainer.innerHTML = '<div class="empty-state"><p>No jobs match your current filters.</p></div>';
+                    return;
+                }
+                
+                let html = '';
+                
+                pageItems.forEach(job => {
+                    const matchColor = getMatchScoreColor(job.match_score);
+                    
+                    html += `
+                        <div class="job-card">
+                            <div class="job-header">
+                                <h3 class="job-title">${job.title}</h3>
+                                <span class="match-score" style="background-color: ${matchColor}">${job.match_score}% Match</span>
+                            </div>
+                            <div class="job-company">${job.company}</div>
+                            <div class="job-location">${job.location || 'Location not specified'}</div>
+                            <div class="job-description">${job.description_snippet || 'No description available'}</div>
+                            <div class="job-footer">
+                                <div class="matching-skills">
+                                    <strong>Matching Skills:</strong>
+                                    <div class="skill-tags">
+                                        ${(job.matching_skills || []).map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                                    </div>
+                                </div>
+                                <div class="job-actions">
+                                    <a href="${job.url}" class="job-link" target="_blank">View Job</a>
+                                    <button class="apply-button" data-job-id="${job.id}">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                recommendationsContainer.innerHTML = html;
+                
+                // Add event listeners for apply buttons
+                document.querySelectorAll('.apply-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const jobId = this.getAttribute('data-job-id');
+                        applyToJob(jobId);
+                    });
+                });
+            }
+            
+            // Helper function to get color for match score
+            function getMatchScoreColor(score) {
+                if (score >= 90) return '#d4edda'; // Green
+                if (score >= 75) return '#fff3cd'; // Yellow
+                if (score >= 50) return '#cce5ff'; // Blue
+                return '#f8d7da'; // Red
+            }
+            
+            // Apply to job function
+            function applyToJob(jobId) {
+                const job = allRecommendations.find(j => j.id === jobId);
+                if (!job) return;
+                
+                fetch('/api/apply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ job_id: jobId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Application submitted successfully!');
+                    } else {
+                        alert('Failed to submit application: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while submitting your application.');
+                });
+            }
+            
+            // Refresh recommendations
+            refreshButton.addEventListener('click', function() {
+                loadingIndicator.style.display = 'block';
+                recommendationsContainer.style.display = 'none';
+                
+                fetch('/api/recommendations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        loadRecommendations();
+                    } else {
+                        throw new Error(data.message || 'Failed to refresh recommendations');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loadingIndicator.style.display = 'none';
+                    recommendationsContainer.innerHTML = '<p class="error-message">An error occurred while refreshing recommendations: ' + error.message + '</p>';
+                    recommendationsContainer.style.display = 'block';
+                });
+            });
+            
+            // Add event listeners
+            searchInput.addEventListener('input', applyFiltersAndSort);
+            matchFilter.addEventListener('change', applyFiltersAndSort);
+            sortBy.addEventListener('change', applyFiltersAndSort);
+            
+            // Pagination event listeners
+            prevPageButton.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    applyFiltersAndSort();
+                }
+            });
+            
+            nextPageButton.addEventListener('click', function() {
+                const totalPages = Math.ceil(filteredRecommendations.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    applyFiltersAndSort();
+                }
+            });
+            
+            // Load recommendations on page load
+            loadRecommendations();
+        });
+    </script>
+    
+    <style>
+        .recommendations-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .filter-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .search-filter {
+            flex: 2;
+            min-width: 200px;
+        }
+        
+        .match-filter,
+        .sort-options {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .filter-section input,
+        .filter-section select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .filter-section label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .action-button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            align-self: flex-end;
+        }
+        
+        .action-button:hover {
+            background-color: #45a049;
+        }
+        
+        .job-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .job-title {
+            margin: 0;
+            font-size: 1.2rem;
+            flex: 1;
+        }
+        
+        .match-score {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .job-company {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .job-location {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .job-description {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .job-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .matching-skills {
+            flex: 2;
+        }
+        
+        .skill-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .skill-tag {
+            background-color: #e0e0e0;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .job-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .job-link,
+        .apply-button {
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+        
+        .job-link {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .apply-button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .apply-button:hover {
+            background-color: #3367d6;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            gap: 15px;
+        }
+        
+        .pagination button {
+            padding: 8px 15px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .pagination button:disabled {
+            background-color: #e0e0e0;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-style: italic;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        
+        .error-message {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .job-footer {
+                flex-direction: column;
+            }
+            
+            .filter-section {
+                flex-direction: column;
+            }
+        }
+    </style>
+</body>
+</html>
