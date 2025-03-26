@@ -1,37 +1,42 @@
-/* Profile page styles */
-
+/* Profile content container */
 .profile-view {
     margin-bottom: 30px;
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #d1d9e6;
 }
 
 .profile-view h3 {
-    color: #004080; /* Darker blue for better contrast */
+    color: #111;
     margin-top: 20px;
     margin-bottom: 10px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
-    font-weight: 600; /* Make headers bolder */
+    border-bottom: none;
+    font-weight: 600;
+    font-size: 1.25rem;
 }
 
 .profile-view p {
-    margin: 8px 0; /* Increased margin for better spacing */
-    line-height: 1.5; /* Improved line height */
+    margin: 8px 0;
+    line-height: 1.5;
 }
 
 .profile-view .resume-text {
     white-space: pre-wrap;
     background-color: #f9f9f9;
     padding: 15px;
-    border: 1px solid #ddd; /* Slightly darker border */
-    border-radius: 4px;
+    border: 1px solid #d1d9e6;
+    border-radius: 6px;
     max-height: 400px;
     overflow-y: auto;
     font-family: 'Courier New', monospace;
     font-size: 14px;
-    line-height: 1.6; /* Improved line height */
-    color: #333; /* Darker text color */
+    line-height: 1.6;
+    color: #333;
 }
 
+/* Edit form styling */
 .edit-form {
     display: none;
     animation: fadeIn 0.3s ease-in;
@@ -66,6 +71,7 @@
     font-style: italic;
 }
 
+/* Resume toolbar */
 .resume-toolbar {
     margin-bottom: 10px;
     display: flex;
@@ -73,10 +79,10 @@
 }
 
 .resume-file-info {
-    background-color: #e9f7fd;
+    background-color: #fff;
     padding: 10px 15px;
-    border: 1px solid #c2e7f5;
-    border-radius: 4px;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
     margin-bottom: 15px;
     display: flex;
     align-items: center;
@@ -85,7 +91,7 @@
 
 .resume-file-info p {
     margin: 0;
-    color: #0c5460;
+    color: #333;
 }
 
 .upload-progress {
@@ -100,7 +106,7 @@
 .upload-status {
     font-size: 12px;
     margin-top: 5px;
-    color: #333; /* Darker text for better visibility */
+    color: #333;
     display: none;
     transition: all 0.3s ease;
 }
@@ -125,19 +131,19 @@
 }
 
 .icon-download {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="white"><path d="M8 12l-4-4h2.5V4h3v4H12L8 12zm-.5 4c-3.59 0-6.5-2.91-6.5-6.5S3.91 3 7.5 3 14 5.91 14 9.5 11.09 16 7.5 16z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="white"><path .../></svg>');
 }
 
 .icon-copy {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M4 4v10h10V4H4zm9 9H5V5h8v8zm-3-9H2v10h1V5h7V4z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="%230066cc"><path .../></svg>');
 }
 
 .icon-text {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M13.5 1h-11C1.67 1 1 1.67 1 2.5v11c0 .83.67 1.5 1.5 1.5h11c.83 0 1.5-.67 1.5-1.5v-11c0-.83-.67-1.5-1.5-1.5zM5 13L2 7h2l2 4 2-4h2L7 13H5zm8-2h-4v-1h4v1zm0-2h-4v-1h4v1zm0-2h-4V6h4v1z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="%230066cc"><path .../></svg>');
 }
 
 .icon-file {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230c5460"><path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1zm3 13H4V2h4v4h4v8z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="%230c5460"><path .../></svg>');
 }
 
 /* Certification styles */
@@ -146,12 +152,17 @@
 }
 
 .certification-entry:hover {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 /* Language entry styles */
 .language-entry {
     align-items: center;
+    background-color: white;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
 }
 
 @media (max-width: 768px) {
@@ -168,5 +179,5 @@
 }
 
 .card-header h3, .card-header h4 {
-    color: white !important; /* Ensure headers in card headers are white */
+    color: white !important;
 }

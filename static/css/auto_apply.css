@@ -1,76 +1,3 @@
-/* Global font and background */
-html, body {
-    height: 100vh;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    background: linear-gradient(to bottom, #ffffff 0%, #d1e9fa 100%);
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    color: #111;
-    padding-bottom: 60px;
-}
-
-/* Header - like Behance top bar */
-header.top-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.2rem 2rem;
-    background-color: white;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-header .brand {
-    font-size: 1.2rem;
-    font-weight: bold;
-    font-family: 'Alatsi', sans-serif;
-    color: #555;
-}
-
-/* Navigation buttons */
-header nav {
-    display: flex;
-    justify-content: space-between;
-    flex-grow: 1;
-    align-items: center;
-}
-
-header nav ul.nav-left,
-header nav ul.nav-right {
-    display: flex;
-    list-style: none;
-    gap: 1rem;
-    margin: 0;
-    padding: 0;
-}
-
-header nav ul.nav-left {
-    margin-right: auto;
-    margin-left: 1.5rem; /* added space from left edge */
-}
-
-header nav ul.nav-right {
-    margin-left: auto;
-}
-
-header nav a {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    text-decoration: none;
-    color: #111;
-    font-size: 0.95rem;
-    background-color: transparent;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font-weight: bold;
-    transition: color 0.2s ease;
-}
-
-header nav a:hover {
-    color: #2a829f;
-}
-
 /* Main layout for the button */
 .action-container {
     display: flex;
@@ -118,16 +45,6 @@ header nav a:hover {
     background-color: #0f5dc1;
 }
 
-/* Footer */
-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    color: #999;
-    font-size: 0.85rem;
-    text-align: center;
-}
 /* Button icon styling */
 .button-icon {
     width: 100px;
