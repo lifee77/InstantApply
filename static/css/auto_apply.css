@@ -1,157 +1,163 @@
-/* If desired, you can import a nicer font here, e.g.: */
-/* @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap'); */
-
-/* GLOBAL STYLES */
+/* Global font and background */
 html, body {
     height: 100vh;
     margin: 0;
     padding: 0;
-    /* Let scrolling happen if needed */
     overflow-x: hidden;
     overflow-y: auto;
-
-    /* Wavy black-and-white background image
-       Replace 'wavy_lines_bg.png' with the actual path or URL of your image. */
-    background: url('../images/bg_lines1.jpg') no-repeat center center;
-    background-size: cover;
-    color: #333;
-    font-family: Arial, sans-serif; /* or 'Lato', sans-serif */
-    position: relative; /* For pseudo-elements positioning */
+    background: linear-gradient(to bottom, #ffffff 0%, #d1e9fa 100%);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: #111;
+    padding-bottom: 60px;
 }
 
-/* HEADER LAYOUT */
+/* Header - like Behance top bar */
 header.top-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 2rem;
-    background-color: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(3px);
+    padding: 1.2rem 2rem;
+    background-color: white;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-/* BRANDING */
 header .brand {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: bold;
+    font-family: 'Alatsi', sans-serif;
+    color: #555;
 }
 
-/* NAVIGATION */
-header nav ul {
-    list-style: none;
+/* Navigation buttons */
+header nav {
     display: flex;
+    justify-content: space-between;
+    flex-grow: 1;
+    align-items: center;
+}
+
+header nav ul.nav-left,
+header nav ul.nav-right {
+    display: flex;
+    list-style: none;
     gap: 1rem;
     margin: 0;
+    padding: 0;
 }
 
-header nav li {
-    /* Just spacing items */
+header nav ul.nav-left {
+    margin-right: auto;
+    margin-left: 1.5rem; /* added space from left edge */
+}
+
+header nav ul.nav-right {
+    margin-left: auto;
 }
 
 header nav a {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
     text-decoration: none;
-    color: #000;
-    padding: 0.5rem 1rem;
-    border: 1px solid #000;
-    border-radius: 20px;
-    transition: background-color 0.2s ease;
+    color: #111;
+    font-size: 0.95rem;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-weight: bold;
+    transition: color 0.2s ease;
 }
 
 header nav a:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    color: #2a829f;
 }
 
-.header-shape {
-    background: url('/static/images/bg_lines1.png') no-repeat center;
-    background-size: contain;
-    height: 100px;
-    width: 100%;
-  }
-
-/* ACTION CONTAINER */
+/* Main layout for the button */
 .action-container {
-    position: relative; /* For pseudo-elements positioning */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 50vh;
-    padding: 20px;
+    margin-top: 80px;
+    padding: 40px 20px;
 }
 
-/* REPLACE the old .apply-button with a new .big-apply-button that is pill-shaped and filled */
+.button-bg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    cursor: pointer;
+    background-color: #fff;
+    border: 1px solid #d1d9e6;
+    border-radius: 12px;
+    padding: 60px 80px;
+    box-shadow: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.button-bg:hover {
+    border-color: #b0b9cc;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* The blue call-to-action button */
 .big-apply-button {
     padding: 1rem 2rem;
-    font-size: 1.2rem;
-    font-weight: bold;
-    background-color: #cce6f5; /* soft blue fill */
-    color: #000;
-    border: 1px solid #000;
-    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: #1473e6;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Copperplate Gothic 29 BC', sans-serif;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .big-apply-button:hover {
-    background-color: #b0d8ec;
-    transform: translateY(-2px);
+    background-color: #0f5dc1;
 }
 
-.big-apply-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* DESCRIPTION TEXT */
-.description {
-    font-size: 1.8em;
-    font-weight: 500;
+/* Footer */
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    color: #999;
+    font-size: 0.85rem;
     text-align: center;
-    margin: 20px auto;
-    max-width: 900px;
-    line-height: 1.4;
-    padding: 20px;
-    animation: fadeIn 0.8s ease-out forwards;
-    opacity: 0; /* Start invisible for fadeIn animation */
-    position: relative;
-    z-index: 1;
+}
+/* Button icon styling */
+.button-icon {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+    color: #0d66d0;
 }
 
-.description strong {
-    font-weight: 700;
-    text-decoration: underline;
+/* Button text styling */
+.button-text {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #111;
 }
 
-@keyframes fadeIn {
-    to { opacity: 1; }
+.button-subtext {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: #555;
+    margin-top: 10px;
+    text-align: center;
 }
 
-/* HEADINGS */
-h1, h2, h3, h4, h5, h6 {
-    color: #333;
-    margin: 0.5em 0;
-    font-weight: 700;
-    font-family: Arial, sans-serif; /* or 'Lato', etc. */
-}
-
-/* PARAGRAPH STYLING */
-p {
-    color: #333;
-    line-height: 1.6;
-}
-
-/* UTILITY CLASSES FOR SPACING */
-.mt-20 { margin-top: 20px; }
-.mb-20 { margin-bottom: 20px; }
-
-/* LINK STYLING */
-a {
-    color: #333;
-    text-decoration: none;
-    border-bottom: 2px dashed #333;
-    transition: color 0.2s ease;
-}
-
-a:hover {
-    color: #666;
+/* Page slogan styling */
+.page-slogan {
+    text-align: center;
+    font-size: 2.6rem;
+    font-weight: 600;
+    margin-top: 100px;
+    color: #222;
 }

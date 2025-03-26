@@ -20,11 +20,14 @@
     </header>
 
     <main>
+        <h2 class="page-slogan">One button is all you need</h2>
         <section class="apply-section">
-            <p class="description">One button is all you need!</p>
-
             <div class="action-container">
-                <button class="big-apply-button">APPLY TO JOBS</button>
+                <a href="#" class="button-bg">
+                    <!-- Replace with actual image -->
+                    <img src="{{ url_for('static', filename='images/cat_icon.svg') }}" alt="Applications Icon" class="button-icon">
+                    <span class="button-text">APPLY TO JOBS</span>
+                </a>
                 <div id="status" class="status-message"></div>
             </div>
         </section>
@@ -35,12 +38,11 @@
     </footer>
 
     <script>
-        document.querySelector('.big-apply-button').addEventListener('click', function() {
+        document.querySelector('.button-bg').addEventListener('click', function() {
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = "Applying to jobs... This may take a few moments.";
             statusDiv.className = "status-message processing";
 
-            this.disabled = true;
             this.style.opacity = '0.5';
 
             fetch('/api/auto-apply', {
@@ -49,7 +51,6 @@
             })
             .then(response => response.json())
             .then(data => {
-                this.disabled = false;
                 this.style.opacity = '1';
                 if (data.message) {
                     statusDiv.textContent = data.message;
@@ -63,7 +64,6 @@
                 }
             })
             .catch(error => {
-                this.disabled = false;
                 this.style.opacity = '1';
                 statusDiv.textContent = 'Error during auto-apply: ' + error;
                 statusDiv.className = "status-message error";
