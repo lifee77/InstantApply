@@ -71,7 +71,6 @@
 
 .progress {
     height: 100%;
-    background-color: #288269;
     border-radius: 5px;
 }
 
@@ -104,23 +103,15 @@
 }
 
 .application-item .status.submitted {
-    background-color: #cce5ff;
-    color: #004085;
 }
 
 .application-item .status.interview {
-    background-color: #fff3cd;
-    color: #856404;
 }
 
 .application-item .status.rejected {
-    background-color: #f8d7da;
-    color: #721c24;
 }
 
 .application-item .status.accepted {
-    background-color: #d4edda;
-    color: #155724;
 }
 
 .empty-state {
@@ -152,7 +143,7 @@
 
 .job-card {
     background-color: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
@@ -165,7 +156,6 @@
 
 .job-card .company {
     font-weight: bold;
-    color: #4285f4;
     margin-bottom: 5px;
 }
 
@@ -179,31 +169,17 @@
     gap: 10px;
 }
 
-.view-job-btn,
-.apply-btn {
-    padding: 8px 12px;
-    border-radius: 4px;
-    text-decoration: none;
-    text-align: center;
-    font-weight: bold;
-}
-
 .view-job-btn {
-    background-color: #e0e0e0;
-    color: #333;
     flex: 1;
 }
 
 .apply-btn {
-    background-color: #4CAF50;
-    color: white;
     border: none;
     cursor: pointer;
     flex: 1;
 }
 
 .apply-btn:hover {
-    background-color: #45a049;
 }
 
 .loading,

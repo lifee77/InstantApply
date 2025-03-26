@@ -23,23 +23,21 @@
     <div class="profile-header d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1>Your Profile</h1>
-            <p class="lead">Complete your profile to improve your job application process</p>
+            <p class="lead">Fill in the fields to customize your job applications</p>
         </div>
         <div class="text-end">
             {% if current_user.resume_file_path %}
-                <a href="{{ url_for('profile.upload_resume') }}" class="btn btn-outline-primary me-2 position-relative">
-                    <i class="bi bi-file-earmark-arrow-up"></i> Replace Resume
-                    <small class="btn-action-label">Upload a new resume file</small>
+                <a href="{{ url_for('profile.upload_resume') }}" class="btn position-relative">
+                    <i class="bi bi-file-earmark-arrow-up"> Replace Resume</i>
                 </a>
             {% else %}
-                <a href="{{ url_for('profile.upload_resume') }}" class="btn btn-primary me-2 position-relative">
-                    <i class="bi bi-file-earmark-arrow-up"></i> Upload Resume
+                <a href="{{ url_for('profile.upload_resume') }}" class="btn position-relative">
+                    <i class="bi bi-file-earmark-arrow-up">Upload Resume</i> 
                     <small class="btn-action-label">Upload your resume to auto-fill profile</small>
                 </a>
             {% endif %}
             <button id="btn-edit-profile" class="btn btn-secondary position-relative">
-                <i class="bi bi-pencil"></i> Edit Profile
-                <small class="btn-action-label">Manually update profile details</small>
+                <i class="bi bi-pencil"> Edit Profile </i>
             </button>
         </div>
     </div>
@@ -75,7 +73,7 @@
     <div id="profile-edit" class="edit-form" style="display: none;">
         <form id="user-profile-form" method="POST" action="{{ url_for('profile.profile') }}" enctype="multipart/form-data">
             {{ form.csrf_token if form else '' }}
-            {% include 'profile_edit/resume_edit.html' %} <!-- Moved to top -->
+            {% include 'profile_edit/resume_edit.html' %}
             {% include 'profile_edit/personal_info_edit.html' %}
             {% include 'profile_edit/skills_experience_edit.html' %}
             {% include 'profile_edit/projects_edit.html' %}
