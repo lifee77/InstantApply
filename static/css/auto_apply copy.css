@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');
+
+/* GLOBAL STYLES */
+html, body {
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent scrolling */
+    background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+    color: #333;
+    font-family: 'Lato', sans-serif;
+    position: relative;
+}
+
+/* Decorative pseudo-elements removed for a clean background */
+
+/* HEADER (optional) */
+header {
+    background: linear-gradient(45deg, #ff9a9e, #fad0c4);
+    padding: 20px;
+    text-align: center;
+    border-bottom: 2px solid #e0a899;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    font-size: 3em;
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+/* ACTION CONTAINER */
+.action-container {
+    position: relative; /* For pseudo-elements positioning */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Reduced overall height for a shorter page */
+    min-height: 50vh; 
+    padding: 20px;
+}
+
+/* Additional doodles in the container background */
+/* Removed decorative pseudo-elements from .action-container for a cleaner look */
+
+/* DOODLE-STYLE APPLY BUTTON - NOW A CIRCLE */
+.apply-button {
+    display: inline-block;
+    padding: 15px 30px;
+    font-size: 1.4em;
+    font-weight: bold;
+    font-family: 'Lato', sans-serif;
+    color: #333;
+    background-color: #fff;
+    border: 2px solid #e0a899;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    margin: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.apply-button:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.apply-button:disabled {
+    background-color: #eee;
+    color: #aaa;
+    border-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Remove pseudo-elements for a cleaner look */
+.apply-button::before,
+.apply-button::after {
+    display: none;
+}
+
+/* DESCRIPTION TEXT */
+.description {
+    font-size: 1.8em;
+    font-weight: 500;
+    text-align: center;
+    margin: 20px auto;
+    max-width: 900px;
+    line-height: 1.4;
+    padding: 20px;
+    animation: fadeIn 0.8s ease-out forwards;
+    opacity: 0; /* Start invisible for fadeIn animation */
+    position: relative;
+    z-index: 1;
+}
+
+.description strong {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+/* HEADINGS */
+h1, h2, h3, h4, h5, h6 {
+    color: #333;
+    margin: 0.5em 0;
+    font-weight: 700;
+    font-family: 'Playfair Display', serif;
+    /* Optional: remove uppercase for a softer look */
+}
+
+/* PARAGRAPH STYLING */
+p {
+    color: #333;
+    line-height: 1.6;
+    margin: 1em 0;
+}
+
+/* UTILITY CLASSES FOR SPACING */
+.mt-20 { margin-top: 20px; }
+.mb-20 { margin-bottom: 20px; }
+
+/* LINK STYLING */
+a {
+    color: #333;
+    text-decoration: none;
+    border-bottom: 2px dashed #333;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: #666;
+}

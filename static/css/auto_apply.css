@@ -1,100 +1,157 @@
-.apply-button {
-    padding: 30px 50px;
-    font-size: 2.5em;
+/* If desired, you can import a nicer font here, e.g.: */
+/* @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap'); */
+
+/* GLOBAL STYLES */
+html, body {
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    /* Let scrolling happen if needed */
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    /* Wavy black-and-white background image
+       Replace 'wavy_lines_bg.png' with the actual path or URL of your image. */
+    background: url('../images/bg_lines1.jpg') no-repeat center center;
+    background-size: cover;
+    color: #333;
+    font-family: Arial, sans-serif; /* or 'Lato', sans-serif */
+    position: relative; /* For pseudo-elements positioning */
+}
+
+/* HEADER LAYOUT */
+header.top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(3px);
+}
+
+/* BRANDING */
+header .brand {
+    font-size: 1.5rem;
     font-weight: bold;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    width: 80%;
-    max-width: 600px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin: 20px auto;
-    animation: pulse 2s infinite;
 }
 
-.apply-button:hover {
-    background-color: #45a049;
-    transform: scale(1.05);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+/* NAVIGATION */
+header nav ul {
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+    margin: 0;
 }
 
-/* Add pulsing animation to draw attention */
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    }
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 15px 25px rgba(76, 175, 80, 0.4);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    }
+header nav li {
+    /* Just spacing items */
 }
 
-/* Make sure action container can handle the large button */
+header nav a {
+    text-decoration: none;
+    color: #000;
+    padding: 0.5rem 1rem;
+    border: 1px solid #000;
+    border-radius: 20px;
+    transition: background-color 0.2s ease;
+}
+
+header nav a:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.header-shape {
+    background: url('/static/images/bg_lines1.png') no-repeat center;
+    background-size: contain;
+    height: 100px;
+    width: 100%;
+  }
+
+/* ACTION CONTAINER */
 .action-container {
+    position: relative; /* For pseudo-elements positioning */
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin: 40px 0;
-    width: 100%;
+    justify-content: center;
+    min-height: 50vh;
+    padding: 20px;
 }
 
-/* Update disabled state to maintain size */
-.apply-button:disabled {
-    background-color: #cccccc;
+/* REPLACE the old .apply-button with a new .big-apply-button that is pill-shaped and filled */
+.big-apply-button {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    background-color: #cce6f5; /* soft blue fill */
+    color: #000;
+    border: 1px solid #000;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.big-apply-button:hover {
+    background-color: #b0d8ec;
+    transform: translateY(-2px);
+}
+
+.big-apply-button:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
-    animation: none;
-    transform: scale(1);
+    transform: none;
 }
 
-
-/* Description */
+/* DESCRIPTION TEXT */
 .description {
     font-size: 1.8em;
-    font-weight: 700;
+    font-weight: 500;
     text-align: center;
-    color: #333;
-    margin: 30px auto;
-    max-width: 800px;
+    margin: 20px auto;
+    max-width: 900px;
     line-height: 1.4;
-    text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    padding: 20px;
+    animation: fadeIn 0.8s ease-out forwards;
+    opacity: 0; /* Start invisible for fadeIn animation */
     position: relative;
-    padding: 0 20px;
+    z-index: 1;
 }
 
-/* Add emphasized styling to important parts */
 .description strong {
-    color: #4CAF50;
-    position: relative;
-    display: inline-block;
+    font-weight: 700;
+    text-decoration: underline;
 }
 
-/* Optional: Add subtle animation to the text */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    to { opacity: 1; }
 }
 
-.description {
-    animation: fadeIn 1s ease-out;
+/* HEADINGS */
+h1, h2, h3, h4, h5, h6 {
+    color: #333;
+    margin: 0.5em 0;
+    font-weight: 700;
+    font-family: Arial, sans-serif; /* or 'Lato', etc. */
 }
 
-/* Add a decorative element to draw attention */
-.description::after {
-    content: "";
-    display: block;
-    width: 100px;
-    height: 4px;
-    background-color: #4CAF50;
-    margin: 15px auto 0;
-    border-radius: 2px;
+/* PARAGRAPH STYLING */
+p {
+    color: #333;
+    line-height: 1.6;
+}
+
+/* UTILITY CLASSES FOR SPACING */
+.mt-20 { margin-top: 20px; }
+.mb-20 { margin-bottom: 20px; }
+
+/* LINK STYLING */
+a {
+    color: #333;
+    text-decoration: none;
+    border-bottom: 2px dashed #333;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: #666;
 }
