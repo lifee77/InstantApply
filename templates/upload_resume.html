@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Resume - InstantApply{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<style>
+    .upload-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .upload-icon {
+        font-size: 48px;
+        color: #007bff;
+        margin-bottom: 20px;
+    }
+    
+    .upload-title {
+        margin-bottom: 20px;
+        color: #333;
+    }
+    
+    .upload-instructions {
+        margin-bottom: 30px;
+    }
+    
+    .upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 40px 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+        background-color: #fff;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover, .upload-area.dragover {
+        border-color: #007bff;
+        background-color: #f0f7ff;
+    }
+    
+    .upload-label {
+        display: block;
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+    
+    .upload-preview {
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .file-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #e9f7fd;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-top: 15px;
+    }
+    
+    .skip-link {
+        margin-top: 20px;
+        display: block;
+        color: #6c757d;
+    }
+    
+    .parsing-status {
+        display: none;
+        margin-top: 20px;
+    }
+    
+    .parsing-spinner {
+        width: 2rem;
+        height: 2rem;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    {% include 'components/flash_messages.html' %}
+    
+    <div class="upload-container">
+        <div class="upload-icon">📄</div>
+        <h2 class="upload-title">Upload Your Resume</h2>
+        <p class="upload-instructions">Your resume will be automatically parsed to fill in your profile information, saving you time entering data manually.</p>
+        
+        <form id="resume-upload-form" action="{{ url_for('profile.upload_resume') }}" method="POST" enctype="multipart/form-data">
+            {{ form.csrf_token }}
+            
+            <div id="upload-area" class="upload-area">
+                <label for="resume-file" class="upload-label">Drag & drop your resume or click to browse</label>
+                <input type="file" id="resume-file" name="resume_file" class="form-control" 
+                       accept=".pdf,.doc,.docx,.txt" style="display: none;">
+                <button type="button" id="browse-button" class="btn btn-outline-primary">Browse Files</button>
+                <p class="mt-2 text-muted">Supported formats: PDF, DOCX, DOC, TXT</p>
+            </div>
+            
+            <div id="upload-preview" class="upload-preview">
+                <h5>Selected File</h5>
+                <div id="file-info" class="file-info">
+                    <p id="file-name"></p>
+                    <button type="button" id="remove-file" class="btn btn-sm btn-outline-danger">Remove</button>
+                </div>
+            </div>
+            
+            <div id="parsing-status" class="parsing-status">
+                <div class="spinner-border parsing-spinner text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Parsing your resume... This may take a moment.</p>
+            </div>
+            
+            <div class="mt-4">
+                <button type="submit" id="upload-button" class="btn btn-primary btn-lg" disabled>
+                    Continue to Profile
+                </button>
+            </div>
+        </form>
+        
+        <a href="{{ url_for('profile.profile') }}" class="skip-link">Skip this step and build profile manually</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('upload-area');
+    const resumeFileInput = document.getElementById('resume-file');
+    const browseButton = document.getElementById('browse-button');
+    const uploadPreview = document.getElementById('upload-preview');
+    const fileNameDisplay = document.getElementById('file-name');
+    const removeFileButton = document.getElementById('remove-file');
+    const uploadButton = document.getElementById('upload-button');
+    const uploadForm = document.getElementById('resume-upload-form');
+    const parsingStatus = document.getElementById('parsing-status');
+    
+    // Handle click on browse button
+    browseButton.addEventListener('click', function() {
+        resumeFileInput.click();
+    });
+    
+    // Handle click on upload area
+    uploadArea.addEventListener('click', function() {
+        resumeFileInput.click();
+    });
+    
+    // Handle drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function() {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        if (e.dataTransfer.files.length) {
+            resumeFileInput.files = e.dataTransfer.files;
+            handleFileSelect();
+        }
+    });
+    
+    // Handle file selection
+    resumeFileInput.addEventListener('change', handleFileSelect);
+    
+    function handleFileSelect() {
+        if (resumeFileInput.files.length) {
+            const file = resumeFileInput.files[0];
+            const maxSizeMB = 10;
+            const maxSizeBytes = maxSizeMB * 1024 * 1024;
+            
+            if (file.size > maxSizeBytes) {
+                alert(`File is too large. Maximum size is ${maxSizeMB}MB.`);
+                resumeFileInput.value = '';
+                return;
+            }
+            
+            // Update UI to show selected file
+            fileNameDisplay.textContent = file.name;
+            uploadPreview.style.display = 'block';
+            uploadButton.disabled = false;
+        }
+    }
+    
+    // Handle remove button click
+    removeFileButton.addEventListener('click', function() {
+        resumeFileInput.value = '';
+        uploadPreview.style.display = 'none';
+        uploadButton.disabled = true;
+    });
+    
+    // Handle form submission
+    uploadForm.addEventListener('submit', function(e) {
+        if (resumeFileInput.files.length) {
+            parsingStatus.style.display = 'block';
+            uploadButton.disabled = true;
+        }
+    });
+});
+</script>
+{% endblock %}
