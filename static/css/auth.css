@@ -1,7 +1,7 @@
 .auth-section {
     max-width: 500px;
     margin: 0 auto;
-    padding: 25px;
+    padding: 25px 25px 20px;
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -36,8 +36,10 @@
 }
 
 .remember-me {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    white-space: nowrap;
+    gap: 0.4rem;
 }
 
 .remember-me input {
@@ -47,6 +49,7 @@
 
 .remember-me label {
     margin-bottom: 0;
+    display: inline-block;
 }
 
 .form-text {
@@ -70,4 +73,34 @@
 
 .auth-links a:hover {
     text-decoration: underline;
+}
+
+/* Styles for form-group inputs to match profile-view style */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 12px;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #2a829f;
+    box-shadow: 0 0 0 0.2rem rgba(42, 130, 159, 0.25);
 }

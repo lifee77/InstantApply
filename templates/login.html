@@ -8,17 +8,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 </head>
 <body>
-    <header>
-        <h1>InstantApply</h1>
-        <p>Automated Job Application Assistant</p>
+    <header class="top-header">
+        <div class="brand">InstantApply</div>
         <nav>
-            <a href="/">Home</a> | 
-            <a href="/login">Login</a> |
-            <a href="/signup">Sign Up</a>
+            <ul class="nav-left" style="margin-left: 1.5rem;">
+                <li><a href="/profile">Home</a></li>
+            </ul>
         </nav>
     </header>
     
-    <main>
+    <main class="pt-5">
         <section class="auth-section">
             <h2>Login</h2>
             
@@ -42,11 +41,7 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required>
                 </div>
-                
-                <div class="form-group remember-me">
-                    <input type="checkbox" id="remember" name="remember">
-                    <label for="remember">Remember me</label>
-                </div>
+
                 
                 <button type="submit">Login</button>
             </form>
