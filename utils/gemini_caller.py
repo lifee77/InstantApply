@@ -1,14 +1,46 @@
 import google.generativeai as genai
 import os
 import json
+import base64
 from dotenv import load_dotenv
 
 # Load environment variables from .env
 load_dotenv()
+
 # Set up Gemini API key globally
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
+
+def call_gemini_vision(prompt, image_data):
+    """
+    Call the Gemini Pro Vision model with an image and a prompt
+    
+    Args:
+        prompt: Text prompt describing what to extract from the image
+        image_data: Binary image data (bytes)
+        
+    Returns:
+        String response from Gemini model
+    """
+    try:
+        # Configure the model - use Gemini Pro Vision which supports images
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        
+        # Create the content parts (text prompt and image)
+        parts = [
+            {"text": prompt},
+            {"mime_type": "image/jpeg", "data": base64.b64encode(image_data).decode('utf-8')}
+        ]
+        
+        # Generate response
+        response = model.generate_content(parts)
+        
+        # Return the text response
+        return response.text
+    except Exception as e:
+        print(f"Error calling Gemini Vision API: {str(e)}")
+        return None
 
 def generate_cover_letter(job_title, company, user_data):
     """Generates a cover letter using Gemini AI with provided user data."""

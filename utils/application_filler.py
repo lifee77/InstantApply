@@ -33,80 +33,81 @@ def valid_url(url: str) -> bool:
         logger.warning(f"Invalid URL detected: {url}")
         return True # Return True for testing purposes
 
-async def extract_application_questions_async(job_id: str) -> List[Dict[str, Any]]:
-    """
-    Extract application questions from a job posting using Playwright
-    
-    Args:
-        job_id: The job ID or URL
-        
-    Returns:
-        List of question dictionaries
-    """
+async def extract_application_questions_async(job_id: str, page=None) -> List[Dict[str, Any]]:
     questions = []
-    
-    async with async_playwright() as p:
-        try:
-            # Launch browser with more stable parameters
-            browser = await p.chromium.launch(
-                headless=False,  # Use headed mode to avoid crashes
-                args=[
-                    "--no-sandbox",
-                    "--disable-gpu",
-                    "--disable-software-rasterizer", 
-                    "--disable-dev-shm-usage",
-                    "--disable-setuid-sandbox"
-                ]
-            )
-            context = await browser.new_context()
-            page = await context.new_page()
-            
-            # Navigate to the application page
-            await page.goto(job_id, timeout=60000) 
-            
+    launched_browser = False
+
+    if page is None:
+        launched_browser = True
+        from playwright.async_api import async_playwright
+        async with async_playwright() as p:
             try:
-                # Wait for application form to load with a longer timeout
-                logger.info("Waiting for form to load...")
-                await page.wait_for_selector("form", timeout=30000)
-                logger.info("Form loaded, proceeding to fill fields...")                
-                # Find all label elements within the form
-                label_elements = await page.query_selector_all("form label")
-                
-                for label_element in label_elements:
-                    question_text = await label_element.inner_text()
-                    question_text = question_text.strip()
-                    
-                    # Exclude standard fields
-                    if question_text.lower() in ["name", "email", "phone", "resume", "linkedin"]:
-                        continue
-                    
-                    logger.debug(f"Detected question label: {question_text}")
-                    
-                    # Default question type
-                    question_type = "text"
-                    
-                    questions.append({
-                        "text": question_text,
-                        "type": question_type
-                    })
+                # Launch browser with more stable parameters
+                browser = await p.firefox.launch(
+                    headless=False,  # Use headed mode to avoid crashes
+                    args=[
+                        "--no-sandbox",
+                        "--disable-gpu",
+                        "--disable-software-rasterizer",
+                        "--disable-dev-shm-usage",
+                        "--disable-setuid-sandbox"
+                    ]
+                )
+                context = await browser.new_context()
+                page = await context.new_page()
+                # Navigate to the application page
+                await page.goto(job_id, timeout=60000)
             except Exception as e:
-                logger.warning(f"Error finding form elements: {str(e)}")
-                # Return default questions if extraction fails
-                questions = [
-                    {"text": "What is your greatest strength?", "type": "text"},
-                    {"text": "Why do you want to work here?", "type": "text"},
-                ]
-                logger.info(f"Using default questions: {questions}")
-                        
+                logger.error(f"Error launching browser in extract_application_questions_async: {str(e)}")
+                return []
+    else:
+        # Use the provided page and navigate to the URL
+        try:
+            await page.goto(job_id, timeout=60000)
         except Exception as e:
-            logger.error(f"Error extracting application questions: {str(e)}")
-            # Return default questions if browser fails
-            questions = [
-                {"text": "What is your greatest strength?", "type": "text"},
-                {"text": "Why do you want to work here?", "type": "text"},
-            ]
-            logger.info(f"Using default questions after error: {questions}")
-    
+            logger.error(f"Error navigating to URL in extract_application_questions_async: {str(e)}")
+            return []
+
+    try:
+        # Wait for form to load
+        logger.info("Waiting for form to load...")
+        await page.wait_for_selector("form", timeout=30000)
+        logger.info("Form loaded, proceeding to extract questions...")
+        
+        # Find all label elements within the form
+        label_elements = await page.query_selector_all("form label")
+        for label_element in label_elements:
+            question_text = await label_element.inner_text()
+            question_text = question_text.strip()
+            
+            # Exclude standard fields
+            if question_text.lower() in ["name", "email", "phone", "resume", "linkedin"]:
+                continue
+            
+            logger.debug(f"Detected question label: {question_text}")
+            
+            # Default question type
+            question_type = "text"
+            questions.append({
+                "text": question_text,
+                "type": question_type
+            })
+    except Exception as e:
+        logger.warning(f"Error finding form elements: {str(e)}")
+        # Return default questions if extraction fails
+        questions = [
+            {"text": "What is your greatest strength?", "type": "text"},
+            {"text": "Why do you want to work here?", "type": "text"},
+        ]
+        logger.info(f"Using default questions: {questions}")
+
+    # If we launched our own browser instance, close it
+    if launched_browser:
+        try:
+            await page.context.browser.close()
+        except Exception as e:
+            logger.warning(f"Error closing browser: {str(e)}")
+
     logger.info(f"Extracted questions: {questions}")
     return questions
 

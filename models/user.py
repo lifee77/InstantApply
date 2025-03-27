@@ -19,6 +19,7 @@ class User(db.Model, UserMixin):
     resume_mime_type = db.Column(db.String(100))  # MIME type of the resume file
     skills = db.Column(db.Text)  # JSON string of skills
     experience = db.Column(db.Text)  # JSON string of experience
+    _projects = db.Column('projects', db.Text)  # JSON string of projects
     
     # Personal Information
     professional_summary = db.Column(db.Text)  # Professional summary/objective statement
@@ -230,6 +231,38 @@ class User(db.Model, UserMixin):
                     value = [str(value)]
             
             self._applicant_values = json.dumps(value)
+            
+    @property
+    def projects(self):
+        if self._projects:
+            try:
+                return json.loads(self._projects)
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return []
+    
+    @projects.setter
+    def projects(self, value):
+        if value is None:
+            self._projects = None
+        else:
+            # Ensure value is a list before converting to JSON
+            if not isinstance(value, list):
+                if isinstance(value, str):
+                    try:
+                        # If it's a string, try to parse it as JSON
+                        value = json.loads(value)
+                    except json.JSONDecodeError:
+                        # If parsing fails, treat it as a single item
+                        value = [value]
+                elif hasattr(value, '__iter__'):
+                    # If it's iterable but not a list, convert to list
+                    value = list(value)
+                else:
+                    # If it's not iterable, make it a single-item list
+                    value = [str(value)]
+            
+            self._projects = json.dumps(value)
     
     def to_dict(self):
         return {
@@ -238,6 +271,7 @@ class User(db.Model, UserMixin):
             'email': self.email,
             'skills': self.skills,
             'experience': self.experience,
+            'projects': self.projects,
             'has_resume': bool(self.resume),
             'has_resume_file': bool(self.resume_file_path),
             'resume_filename': self.resume_filename,

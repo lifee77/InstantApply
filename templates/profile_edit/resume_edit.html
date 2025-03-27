@@ -1,0 +1,16 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Resume</h4>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="user-resume" class="form-label">Resume Text</label>
+            <textarea id="user-resume" name="resume" class="form-control" rows="8" placeholder="Paste your resume text here or upload a file">{{ current_user.resume or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="user-resume-file" class="form-label">Upload Resume</label>
+            <input type="file" id="user-resume-file" name="resume_file" class="form-control" accept=".pdf,.doc,.docx,.txt">
+            <div class="form-text">Supported formats: PDF, DOCX, DOC, TXT. The original file will be stored along with extracted text.</div>
+        </div>
+    </div>
+</div>

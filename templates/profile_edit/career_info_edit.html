@@ -1,0 +1,36 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Career Information</h4>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="career_goals" class="form-label">Career Goals</label>
+            <textarea class="form-control" id="career_goals" name="career_goals" rows="3">{{ current_user.career_goals or '' }}</textarea>
+            <div class="form-text">Share your short and long-term career goals.</div>
+        </div>
+        <div class="mb-3">
+            <label for="biggest_achievement" class="form-label">Biggest Professional Achievement</label>
+            <textarea class="form-control" id="biggest_achievement" name="biggest_achievement" rows="3">{{ current_user.biggest_achievement or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="work_style" class="form-label">Work Style and Team Preferences</label>
+            <textarea class="form-control" id="work_style" name="work_style" rows="3">{{ current_user.work_style or '' }}</textarea>
+            <div class="form-text">Describe your preferred work environment and collaboration style.</div>
+        </div>
+        <div class="mb-3">
+            <label for="industry_attraction" class="form-label">What Attracted You to This Industry/Field</label>
+            <textarea class="form-control" id="industry_attraction" name="industry_attraction" rows="3">{{ current_user.industry_attraction or '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="applicant_values" class="form-label">Your Professional Values</label>
+            <div id="values-container">
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control value-item" placeholder="e.g., Innovation">
+                    <button type="button" class="btn btn-outline-secondary remove-value">Remove</button>
+                </div>
+            </div>
+            <button type="button" id="add-value" class="btn btn-secondary btn-sm mt-2">+ Add Another Value</button>
+            <input type="hidden" name="applicant_values" id="applicant_values_json">
+        </div>
+    </div>
+</div>

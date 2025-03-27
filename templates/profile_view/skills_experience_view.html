@@ -1,0 +1,66 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Skills & Experience</h3>
+    </div>
+    <div class="card-body">
+        {% if current_user.skills %}
+            <h4>Skills</h4>
+            <p>
+                {{ current_user.skills | replace('[','') | replace(']','') | replace('"','') }}
+            </p>
+        {% endif %}
+        {% if current_user.experience %}
+            <h4>Experience</h4>
+            <div class="skills-experience-text">
+                {% set experiences = current_user.experience | from_json %}
+                {% for exp in experiences %}
+                    <!-- Single paragraph for the title/company/dates -->
+                    <p>
+                        <strong>
+                            {% if exp.title %}{{ exp.title }}{% endif %}
+                            {% if exp.company %}{{ " at " + exp.company }}{% endif %}
+                            {% if exp.dates %}{{ " (" + exp.dates + ")" }}{% endif %}
+                        </strong>
+                    </p>
+                    <!-- Single paragraph for all responsibilities/description -->
+                    {% if exp.description %}
+                        <ul>
+                            {% if exp.description is string %}
+                                <li>{{ exp.description }}</li>
+                            {% else %}
+                                {% for item in exp.description %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                    
+                    <!-- Support for old format if present -->
+                    {% if exp.responsibilities %}
+                        <ul>
+                            {% for resp in exp.responsibilities %}
+                                <li>{{ resp }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if current_user.desired_job_titles %}
+            <h4>Desired Job Titles</h4>
+            <ul>
+                {% for title in current_user.desired_job_titles %}
+                    <li>{{ title }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% if current_user.portfolio_links %}
+            <h4>Portfolio Links</h4>
+            <ul>
+                {% for link in current_user.portfolio_links %}
+                    <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>

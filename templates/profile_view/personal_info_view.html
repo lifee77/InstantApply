@@ -1,0 +1,19 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Personal Information</h3>
+    </div>
+    <div class="card-body">
+        <p><strong>Name:</strong> {{ current_user.name }}</p>
+        <p><strong>Email:</strong> {{ current_user.email }}</p>
+        {% if current_user.professional_summary %}
+            <p><strong>Professional Summary:</strong> {{ current_user.professional_summary }}</p>
+        {% endif %}
+        <p><strong>Willing to Relocate:</strong> {{ 'Yes' if current_user.willing_to_relocate else 'No' }}</p>
+        {% if current_user.authorization_status %}
+            <p><strong>Work Authorization:</strong> {{ current_user.authorization_status }}</p>
+        {% endif %}
+        {% if current_user.linkedin_url %}
+            <p><strong>LinkedIn:</strong> <a href="{{ current_user.linkedin_url }}" target="_blank">{{ current_user.linkedin_url }}</a></p>
+        {% endif %}
+    </div>
+</div>

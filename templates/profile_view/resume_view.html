@@ -1,0 +1,28 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Resume</h3>
+    </div>
+    <div class="card-body">
+        {% if current_user.resume_file_path %}
+            <div class="resume-file-info">
+                <div class="resume-file-name">
+                    <span class="icon icon-file"></span> 
+                    Original resume file: {{ current_user.resume_filename }}
+                </div>
+                <button onclick="window.location.href='/api/user/resume'" class="btn-download-original">Download Original</button>
+            </div>
+        {% endif %}
+        
+        {% if current_user.resume %}
+            <div class="resume-container">
+                <div class="resume-text" id="resume-content">{{ current_user.resume }}</div>
+                <div class="resume-toolbar">
+                    <button class="btn-copy" onclick="copyResumeText()">Copy Text</button>
+                    <button class="btn-download" onclick="downloadResumeText()">Download Text</button>
+                </div>
+            </div>
+        {% else %}
+            <p class="empty-field">No resume uploaded yet. Click 'Edit Profile' to add your resume.</p>
+        {% endif %}
+    </div>
+</div>

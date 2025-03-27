@@ -39,10 +39,10 @@ def create_app():
     # Configure app
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-testing')
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    db_path = os.path.join(BASE_DIR, 'instant_apply.db')
+    db_path = os.path.join(BASE_DIR, 'brand_new_db.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
     app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+    
     # Ensure uploads directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
@@ -63,6 +63,14 @@ def create_app():
     # Register debug blueprint if in debug mode
     if app.debug:
         app.register_blueprint(debug_bp)
+
+    
+    @app.template_filter('from_json')
+    def from_json_filter(s):
+        try:
+            return json.loads(s)
+        except Exception:
+            return [] 
 
     @login_manager.user_loader
     def load_user(user_id):

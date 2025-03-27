@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session
 from flask_login import login_required, current_user
 import os
 import json
@@ -7,6 +7,7 @@ import PyPDF2
 import docx2txt
 import datetime
 import logging
+import time
 
 from models.user import db, User
 from forms.profile import ProfileForm
@@ -17,6 +18,10 @@ profile_bp = Blueprint('profile', __name__)
 @login_required
 def profile():
     form = ProfileForm()
+    
+    # Check if we should direct user to upload resume first
+    if request.method == 'GET' and not current_user.resume_file_path and not session.get('skip_resume_upload'):
+        return redirect(url_for('profile.upload_resume'))
     
     if request.method == 'POST':
         # Debug logging
@@ -38,7 +43,6 @@ def profile():
                 try:
                     job_titles = json.loads(job_titles_json)
                     current_app.logger.debug(f"Parsed job titles type: {type(job_titles)}")
-                    current_app.logger.debug(f"Parsed job titles: {job_titles}")
                     
                     # Ensure job_titles is a list (not a dict or something else)
                     if not isinstance(job_titles, list):
@@ -47,7 +51,6 @@ def profile():
                     
                     # The property setter will handle JSON serialization
                     current_user.desired_job_titles = job_titles
-                    current_app.logger.info(f"Processed job titles: {current_user.desired_job_titles}")
                     current_app.logger.debug(f"Stored representation: {current_user._desired_job_titles}")
                 except Exception as e:
                     current_app.logger.error(f"Error processing job titles: {str(e)}")
@@ -75,6 +78,11 @@ def profile():
             if values_json:
                 current_user.applicant_values = json.loads(values_json)
                 
+            # Process projects
+            projects_json = request.form.get('projects')
+            if projects_json:
+                current_user.projects = json.loads(projects_json)
+                
         except json.JSONDecodeError as e:
             current_app.logger.error(f"JSON parsing error: {str(e)}")
             flash(f"Error processing form data: {str(e)}", "danger")
@@ -99,6 +107,38 @@ def profile():
         current_user.work_style = request.form.get('work_style')
         current_user.industry_attraction = request.form.get('industry_attraction')
         
+        # Process demographic information fields
+        current_user.race_ethnicity = request.form.get('race_ethnicity')
+        current_user.gender = request.form.get('gender')
+        
+        # Process graduation date
+        grad_date = request.form.get('graduation_date')
+        if grad_date:
+            try:
+                current_user.graduation_date = datetime.datetime.strptime(grad_date, '%Y-%m-%d').date()
+            except ValueError:
+                current_user.graduation_date = None
+        else:
+            current_user.graduation_date = None
+        
+        current_user.disability_status = request.form.get('disability_status')
+        current_user.military_status = request.form.get('military_status')
+        current_user.military_branch = request.form.get('military_branch')
+        
+        # Process military discharge date
+        discharge_date = request.form.get('military_discharge_date')
+        if discharge_date:
+            try:
+                current_user.military_discharge_date = datetime.datetime.strptime(discharge_date, '%Y-%m-%d').date()
+            except ValueError:
+                current_user.military_discharge_date = None
+        else:
+            current_user.military_discharge_date = None
+            
+        current_user.veteran_status = request.form.get('veteran_status')
+        current_user.needs_sponsorship = 'needs_sponsorship' in request.form
+        current_user.visa_status = request.form.get('visa_status')
+        
         # Process resume text
         current_user.resume = request.form.get('resume', '')
         
@@ -114,8 +154,6 @@ def profile():
                         current_user.resume_file_path = file_path
                         if resume_text:
                             current_user.resume = resume_text
-                        
-                        flash('Resume uploaded and processed successfully.', 'success')
                 except Exception as e:
                     flash(f'Error processing resume: {str(e)}', 'danger')
         
@@ -124,8 +162,60 @@ def profile():
         flash('Profile updated successfully!', 'success')
         return redirect(url_for('profile.profile'))
     
+    # Reset the skip_resume_upload flag if it was set
+    if session.get('skip_resume_upload'):
+        session.pop('skip_resume_upload')
+    
     # For GET requests
     return render_template('profile.html', form=form)
+
+
+@profile_bp.route('/profile/upload-resume', methods=['GET', 'POST'])
+@login_required
+def upload_resume():
+    form = ProfileForm()
+    
+    if request.method == 'POST':
+        if 'resume_file' in request.files:
+            file = request.files['resume_file']
+            if file and file.filename != '':
+                try:
+                    # Track start time for parsing
+                    start_time = time.time()
+                    
+                    # Process the resume file
+                    file_path, filename, resume_text = process_resume_file(file)
+                    
+                    # Log parsing time for debugging
+                    parsing_time = time.time() - start_time
+                    current_app.logger.info(f"Resume parsed in {parsing_time:.2f} seconds")
+                    
+                    if file_path:
+                        # Update user's resume information
+                        current_user.resume_filename = filename
+                        current_user.resume_file_path = file_path
+                        if resume_text:
+                            current_user.resume = resume_text
+                        
+                        # Save changes to database
+                        db.session.commit()
+                        
+                        # Redirect with success message (only once)
+                        flash('Resume uploaded and parsed successfully. Please review your profile information.', 'success')
+                        return redirect(url_for('profile.profile'))
+                except Exception as e:
+                    current_app.logger.error(f"Error in resume upload: {str(e)}")
+                    flash(f'Error processing resume: {str(e)}', 'danger')
+                    return redirect(url_for('profile.upload_resume'))
+        else:
+            flash('No resume file selected.', 'warning')
+    
+    # Skip the resume upload if requested
+    if request.args.get('skip') == 'true':
+        session['skip_resume_upload'] = True
+        return redirect(url_for('profile.profile'))
+    
+    return render_template('upload_resume.html', form=form)
 
 
 def extract_text_from_resume(file_path):
@@ -158,34 +248,60 @@ def extract_text_from_resume(file_path):
 
 def process_resume_file(file):
     """Process an uploaded resume file, extract text, and auto-fill fields."""
-    from utils.document_parser import parse_resume_with_spacy  # import inside function to avoid circular imports
+    from utils.document_parser import parse_pdf  # Use parse_pdf which includes Gemini integration
     
     filename = secure_filename(file.filename)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_filename = f"{timestamp}_{filename}"
-
     # Ensure upload folder exists
     upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
     os.makedirs(upload_folder, exist_ok=True)
-
     file_path = os.path.join(upload_folder, unique_filename)
     file.save(file_path)
-
     # Extract text from the file
     resume_text = extract_text_from_resume(file_path)
     
-    # Parse resume to auto-fill user profile fields
-    parsed_data = parse_resume_with_spacy(resume_text)
+    # Parse resume using the updated parse_pdf function that uses Gemini first
+    parsed_data = parse_pdf(file_path)
     current_app.logger.info(f"Auto-filled data: {parsed_data}")
-
-    # Auto-fill fields into current_user
+    # Auto-fill fields into current_user with better structure for experience
     if parsed_data.get("name"):
         current_user.name = parsed_data["name"]
     if parsed_data.get("linkedin"):
         current_user.linkedin_url = parsed_data["linkedin"]
+    if parsed_data.get("professional_summary"):
+        current_user.professional_summary = parsed_data["professional_summary"]
     if parsed_data.get("skills"):
         current_user.skills = json.dumps(parsed_data["skills"])
+    
+    # Improved experience handling
     if parsed_data.get("experience"):
+        # Convert experience from objects to properly formatted JSON
         current_user.experience = json.dumps(parsed_data["experience"])
-
+    
+    # Projects handling
+    if parsed_data.get("projects"):
+        current_user.projects = json.dumps(parsed_data["projects"])
+    
+    # Other fields
+    if parsed_data.get("certifications"):
+        current_user.certifications = json.dumps([{"name": cert, "organization": "", "expiry": ""} for cert in parsed_data["certifications"]])
+    if parsed_data.get("languages"):
+        current_user.languages = json.dumps([{"language": lang, "proficiency": "Intermediate"} for lang in parsed_data["languages"]])
+    if parsed_data.get("values"):
+        current_user.applicant_values = json.dumps(parsed_data["values"])
+    if parsed_data.get("work_mode_preference"):
+        current_user.work_mode_preference = parsed_data["work_mode_preference"]
+    if parsed_data.get("career_goals"):
+        current_user.career_goals = parsed_data["career_goals"]
+    if parsed_data.get("biggest_achievement"):
+        current_user.biggest_achievement = parsed_data["biggest_achievement"]
+    if parsed_data.get("work_style"):
+        current_user.work_style = parsed_data["work_style"]
+    if parsed_data.get("industry_attraction"):
+        current_user.industry_attraction = parsed_data["industry_attraction"]
+    
+    # If we have job titles from the resume, use them
+    if parsed_data.get("job_titles"):
+        current_user.desired_job_titles = parsed_data["job_titles"]
     return file_path, filename, resume_text

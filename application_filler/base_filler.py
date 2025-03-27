@@ -309,4 +309,94 @@ class BaseApplicationFiller(abc.ABC):
         Returns:
             Dictionary with application status and details
         """
-        pass
+        # This method should be implemented by subclasses if custom browser management is needed.
+        raise NotImplementedError("Subclasses must implement fill_application")
+
+    async def fetch_gemini_response(self, question_text: str) -> str:
+        """
+        Generate a personalized response using Gemini AI as a fallback.
+        This method can be overridden by subclasses for custom integration.
+        """
+        try:
+            logger.info(f"Fetching Gemini response for question: '{question_text}'")
+            # Placeholder for Gemini integration logic.
+            # In a real implementation, this would call an AI service.
+            await asyncio.sleep(1)
+            return f"AI-generated response for: {question_text}"
+        except Exception as e:
+            logger.error(f"Error in fetch_gemini_response: {str(e)}")
+            return "I'm very interested in this opportunity and believe my skills align well with the position requirements."
+
+    async def fill_interactive_form(self, page: Page) -> bool:
+        """
+        Dynamically fill the application form by detecting input fields,
+        date pickers, radio buttons, and other interactive elements.
+        Returns True if at least one field was filled.
+        """
+        filled_count = 0
+        try:
+            # Handle standard input fields
+            input_fields = await page.query_selector_all('input:visible, textarea:visible, select:visible')
+            logger.info(f"Interactive form: Found {len(input_fields)} visible input fields")
+            for i, field in enumerate(input_fields):
+                try:
+                    tag_name = await field.evaluate("el => el.tagName.toLowerCase()")
+                    field_type = await field.get_attribute("type") or "text"
+                    placeholder = await field.get_attribute("placeholder") or ""
+                    name_attr = await field.get_attribute("name") or ""
+                    field_identifier = (name_attr or placeholder).lower()
+
+                    # Determine value from user_data if available, using field identifier as key
+                    value = self.user_data.get(field_identifier)
+                    if not value:
+                        # Fallback to Gemini response if no user data is provided
+                        value = await self.fetch_gemini_response(field_identifier)
+
+                    # Special handling for date fields
+                    if field_type == "date" or "date" in field_identifier:
+                        value = "2025-03-25"
+
+                    # Use the base fill_application_field method to fill the field
+                    selector = f"{tag_name}[name*='{field_identifier}']"
+                    success = await self.fill_application_field(page, selector, value)
+                    if success:
+                        filled_count += 1
+                except Exception as e:
+                    logger.error(f"Interactive form: Error processing field {i+1}: {str(e)}")
+
+            # Handle resume upload
+            resume_uploaded = await self.handle_resume_upload(page)
+            if resume_uploaded:
+                logger.info("Interactive form: Resume uploaded successfully")
+
+            # Additional handling for radio buttons and yes/no questions
+            radio_buttons = await page.query_selector_all('input[type="radio"]:visible')
+            for radio in radio_buttons:
+                try:
+                    name_attr = await radio.get_attribute("name") or ""
+                    response = await self.fetch_gemini_response(name_attr)
+                    if response.lower() in ["yes", "true", "1"]:
+                        await radio.check()
+                        filled_count += 1
+                except Exception as e:
+                    logger.error(f"Interactive form: Error processing radio button: {str(e)}")
+
+            # Handle date pickers (if not standard inputs)
+            date_pickers = await page.query_selector_all('div[role="calendar"], [data-testid="datepicker"], .calendar-input, .date-picker')
+            for picker in date_pickers:
+                try:
+                    if await picker.is_visible():
+                        await picker.click()
+                        await asyncio.sleep(1)
+                        day = await page.query_selector('td:has-text("25"), div:has-text("25")')
+                        if day:
+                            await day.click()
+                            filled_count += 1
+                except Exception as e:
+                    logger.error(f"Interactive form: Error processing date picker: {str(e)}")
+
+            logger.info(f"Interactive form: Filled {filled_count} fields")
+            return filled_count > 0
+        except Exception as e:
+            logger.error(f"Interactive form: Error filling form: {str(e)}")
+            return False

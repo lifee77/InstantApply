@@ -1,0 +1,19 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Work Preferences</h3>
+    </div>
+    <div class="card-body">
+        {% if current_user.desired_salary_range %}
+            <p><strong>Desired Salary:</strong> {{ current_user.desired_salary_range }}</p>
+        {% endif %}
+        {% if current_user.work_mode_preference %}
+            <p><strong>Work Mode:</strong> {{ current_user.work_mode_preference }}</p>
+        {% endif %}
+        {% if current_user.available_start_date %}
+            <p><strong>Available Start Date:</strong> {{ current_user.available_start_date }}</p>
+        {% endif %}
+        {% if current_user.preferred_company_type %}
+            <p><strong>Preferred Company Type:</strong> {{ current_user.preferred_company_type }}</p>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,103 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Demographic Information</h4>
+        <small>This information is optional and will only be used when specifically required by employers</small>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="race_ethnicity" class="form-label">Race/Ethnicity</label>
+            <select class="form-select" id="race_ethnicity" name="race_ethnicity">
+                <option value="" {% if not current_user.race_ethnicity %}selected{% endif %}>Prefer not to say</option>
+                <option value="American Indian or Alaska Native" {% if current_user.race_ethnicity == "American Indian or Alaska Native" %}selected{% endif %}>American Indian or Alaska Native</option>
+                <option value="Asian" {% if current_user.race_ethnicity == "Asian" %}selected{% endif %}>Asian</option>
+                <option value="Black or African American" {% if current_user.race_ethnicity == "Black or African American" %}selected{% endif %}>Black or African American</option>
+                <option value="Hispanic or Latino" {% if current_user.race_ethnicity == "Hispanic or Latino" %}selected{% endif %}>Hispanic or Latino</option>
+                <option value="Native Hawaiian or Other Pacific Islander" {% if current_user.race_ethnicity == "Native Hawaiian or Other Pacific Islander" %}selected{% endif %}>Native Hawaiian or Other Pacific Islander</option>
+                <option value="White" {% if current_user.race_ethnicity == "White" %}selected{% endif %}>White</option>
+                <option value="Two or More Races" {% if current_user.race_ethnicity == "Two or More Races" %}selected{% endif %}>Two or More Races</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="gender" class="form-label">Gender</label>
+            <select class="form-select" id="gender" name="gender">
+                <option value="" {% if not current_user.gender %}selected{% endif %}>Prefer not to say</option>
+                <option value="Male" {% if current_user.gender == "Male" %}selected{% endif %}>Male</option>
+                <option value="Female" {% if current_user.gender == "Female" %}selected{% endif %}>Female</option>
+                <option value="Non-binary" {% if current_user.gender == "Non-binary" %}selected{% endif %}>Non-binary</option>
+                <option value="Other" {% if current_user.gender == "Other" %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="graduation_date" class="form-label">Graduation Date</label>
+            <input type="date" class="form-control" id="graduation_date" name="graduation_date" value="{{ current_user.graduation_date or '' }}">
+        </div>
+        <div class="mb-3">
+            <label for="disability_status" class="form-label">Disability Status</label>
+            <select class="form-select" id="disability_status" name="disability_status">
+                <option value="" {% if not current_user.disability_status %}selected{% endif %}>Prefer not to say</option>
+                <option value="No disability" {% if current_user.disability_status == "No disability" %}selected{% endif %}>No disability</option>
+                <option value="Person with a disability" {% if current_user.disability_status == "Person with a disability" %}selected{% endif %}>Person with a disability</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="military_status" class="form-label">Military Status</label>
+            <select class="form-select" id="military_status" name="military_status" onchange="toggleMilitaryFields()">
+                <option value="" {% if not current_user.military_status %}selected{% endif %}>Select status...</option>
+                <option value="No Military Service" {% if current_user.military_status == "No Military Service" %}selected{% endif %}>No Military Service</option>
+                <option value="Active Duty" {% if current_user.military_status == "Active Duty" %}selected{% endif %}>Active Duty</option>
+                <option value="Veteran" {% if current_user.military_status == "Veteran" %}selected{% endif %}>Veteran</option>
+                <option value="Reserves" {% if current_user.military_status == "Reserves" %}selected{% endif %}>Reserves</option>
+            </select>
+        </div>
+        <div id="military-additional-fields" style="display: none;">
+            <div class="mb-3">
+                <label for="military_branch" class="form-label">Military Branch</label>
+                <select class="form-select" id="military_branch" name="military_branch">
+                    <option value="" {% if not current_user.military_branch %}selected{% endif %}>Select branch...</option>
+                    <option value="Army" {% if current_user.military_branch == "Army" %}selected{% endif %}>Army</option>
+                    <option value="Navy" {% if current_user.military_branch == "Navy" %}selected{% endif %}>Navy</option>
+                    <option value="Air Force" {% if current_user.military_branch == "Air Force" %}selected{% endif %}>Air Force</option>
+                    <option value="Marine Corps" {% if current_user.military_branch == "Marine Corps" %}selected{% endif %}>Marine Corps</option>
+                    <option value="Coast Guard" {% if current_user.military_branch == "Coast Guard" %}selected{% endif %}>Coast Guard</option>
+                    <option value="Space Force" {% if current_user.military_branch == "Space Force" %}selected{% endif %}>Space Force</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="military_discharge_date" class="form-label">Discharge Date</label>
+                <input type="date" class="form-control" id="military_discharge_date" name="military_discharge_date" value="{{ current_user.military_discharge_date or '' }}">
+            </div>
+            <div class="mb-3">
+                <label for="veteran_status" class="form-label">Veteran Status</label>
+                <select class="form-select" id="veteran_status" name="veteran_status">
+                    <option value="" {% if not current_user.veteran_status %}selected{% endif %}>Select status...</option>
+                    <option value="Protected veteran" {% if current_user.veteran_status == "Protected veteran" %}selected{% endif %}>Protected veteran</option>
+                    <option value="Recently separated veteran" {% if current_user.veteran_status == "Recently separated veteran" %}selected{% endif %}>Recently separated veteran</option>
+                    <option value="Disabled veteran" {% if current_user.veteran_status == "Disabled veteran" %}selected{% endif %}>Disabled veteran</option>
+                    <option value="Not a protected veteran" {% if current_user.veteran_status == "Not a protected veteran" %}selected{% endif %}>Not a protected veteran</option>
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Immigration Status</label>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="needs_sponsorship" name="needs_sponsorship" {% if current_user.needs_sponsorship %}checked{% endif %}>
+                <label class="form-check-label" for="needs_sponsorship">I will require sponsorship now or in the future</label>
+            </div>
+            <div class="mt-3">
+                <label for="visa_status" class="form-label">Current Visa Status (if applicable)</label>
+                <select class="form-select" id="visa_status" name="visa_status">
+                    <option value="" {% if not current_user.visa_status %}selected{% endif %}>Not applicable</option>
+                    <option value="F-1 Student" {% if current_user.visa_status == "F-1 Student" %}selected{% endif %}>F-1 Student</option>
+                    <option value="F-1 OPT" {% if current_user.visa_status == "F-1 OPT" %}selected{% endif %}>F-1 OPT</option>
+                    <option value="F-1 STEM OPT" {% if current_user.visa_status == "F-1 STEM OPT" %}selected{% endif %}>F-1 STEM OPT</option>
+                    <option value="H-1B" {% if current_user.visa_status == "H-1B" %}selected{% endif %}>H-1B</option>
+                    <option value="H-4 EAD" {% if current_user.visa_status == "H-4 EAD" %}selected{% endif %}>H-4 EAD</option>
+                    <option value="L-1" {% if current_user.visa_status == "L-1" %}selected{% endif %}>L-1</option>
+                    <option value="J-1" {% if current_user.visa_status == "J-1" %}selected{% endif %}>J-1</option>
+                    <option value="TN" {% if current_user.visa_status == "TN" %}selected{% endif %}>TN</option>
+                    <option value="Other" {% if current_user.visa_status and current_user.visa_status not in ["F-1 Student", "F-1 OPT", "F-1 STEM OPT", "H-1B", "H-4 EAD", "L-1", "J-1", "TN"] %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
