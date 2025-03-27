@@ -5,10 +5,24 @@
     <div class="card-body">
         {% if current_user.projects %}
             <div class="projects-list">
-                {% for project in current_user.projects %}
+                {% set projects = [] %}
+                {% if current_user.projects is string and current_user.projects.startswith('[') %}
+                    {% try %}
+                        {% set projects = current_user.projects | from_json %}
+                    {% except %}
+                        {% set projects = [{'name': 'Project parsing error', 'description': 'Unable to parse project data'}] %}
+                    {% endtry %}
+                {% else %}
+                    {% set projects = current_user.projects %}
+                {% endif %}
+                
+                {% for project in projects %}
                     <div class="project-item mb-4 p-3 border-bottom">
                         <div class="d-flex justify-content-between">
-                            <h4>{{ project.name }}</h4>
+                            <h4>
+                                {% if project.name %}{{ project.name }}{% endif %}
+                                {% if project.dates %}<small class="text-muted">({{ project.dates }})</small>{% endif %}
+                            </h4>
                             {% if project.link %}
                                 <a href="{{ project.link }}" target="_blank" class="btn btn-outline-primary btn-sm">
                                     <i class="bi bi-link-45deg"></i> View Project
@@ -16,7 +30,18 @@
                             {% endif %}
                         </div>
                         
-                        <p class="description mb-2">{{ project.description }}</p>
+                        <!-- Handle description as either a string or list -->
+                        {% if project.description is defined %}
+                            {% if project.description is string %}
+                                <p class="description mb-2">{{ project.description }}</p>
+                            {% else %}
+                                <ul class="description mb-2">
+                                    {% for desc in project.description %}
+                                        <li>{{ desc }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        {% endif %}
                         
                         {% if project.technologies and project.technologies|length > 0 %}
                             <div class="technologies mb-2">

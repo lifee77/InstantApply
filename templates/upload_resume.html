@@ -74,7 +74,7 @@
     }
     
     .parsing-status {
-        display: none;
+        display: none !important;
         margin-top: 20px;
     }
     
@@ -85,7 +85,7 @@
     }
     
     .parsing-error {
-        display: none;
+        display: none !important;
         margin-top: 20px;
         color: #dc3545;
     }
@@ -161,6 +161,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const parsingStatus = document.getElementById('parsing-status');
     const parsingError = document.getElementById('parsing-error');
     
+    // Make sure they're hidden on page load
+    parsingStatus.style.display = 'none';
+    parsingError.style.display = 'none';
+    
     // Only handle click on browse button, not on upload area
     browseButton.addEventListener('click', function(e) {
         e.stopPropagation(); // Stop event from bubbling up to upload area
@@ -231,12 +235,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle form submission with improved logic
     let parsingTimeoutId = null;
     
-    uploadForm.addEventListener('submit', function(e) {
-        // Only show parsing status and set timeout if a file is actually selected
+    // Add click event listener specifically for the upload button
+    uploadButton.addEventListener('click', function(e) {
+        // Only show parsing status when the button is clicked
         if (resumeFileInput.files.length) {
             parsingStatus.style.display = 'block';
+            parsingError.style.display = 'none';
             uploadButton.disabled = true;
-            
+        }
+    });
+    
+    uploadForm.addEventListener('submit', function(e) {
+        // Only set timeout if a file is actually selected
+        if (resumeFileInput.files.length) {
             // Clear any existing timeout
             if (parsingTimeoutId) {
                 clearTimeout(parsingTimeoutId);
