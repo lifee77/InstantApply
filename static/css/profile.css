@@ -1,37 +1,42 @@
-/* Profile page styles */
-
+/* Profile content container */
 .profile-view {
     margin-bottom: 30px;
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #d1d9e6;
 }
 
 .profile-view h3 {
-    color: #004080; /* Darker blue for better contrast */
     margin-top: 20px;
     margin-bottom: 10px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
-    font-weight: 600; /* Make headers bolder */
+    border-bottom: none;
+    font-weight: 600;
+    font-size: 1.25rem;
+    /* Removed the color: #111 that was overriding card header styles */
 }
 
 .profile-view p {
-    margin: 8px 0; /* Increased margin for better spacing */
-    line-height: 1.5; /* Improved line height */
+    margin: 8px 0;
+    line-height: 1.5;
 }
 
-.profile-view .resume-text {
+.profile-view .resume-text, .experience-text {
     white-space: pre-wrap;
     background-color: #f9f9f9;
     padding: 15px;
-    border: 1px solid #ddd; /* Slightly darker border */
-    border-radius: 4px;
+    border: 1px solid #d1d9e6;
+    border-radius: 12px;
     max-height: 400px;
     overflow-y: auto;
     font-family: 'Courier New', monospace;
     font-size: 14px;
-    line-height: 1.6; /* Improved line height */
-    color: #333; /* Darker text color */
+    line-height: 1.6;
+    color: #333;
 }
 
+/* Edit form styling */
 .edit-form {
     display: none;
     animation: fadeIn 0.3s ease-in;
@@ -66,33 +71,42 @@
     font-style: italic;
 }
 
+/* Resume toolbar */
 .resume-toolbar {
     margin-bottom: 10px;
     display: flex;
     justify-content: flex-end;
 }
 
+/* Resume file info styling with better alignment */
 .resume-file-info {
-    background-color: #e9f7fd;
-    padding: 10px 15px;
-    border: 1px solid #c2e7f5;
-    border-radius: 4px;
-    margin-bottom: 15px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 15px;
+    border: 1px solid #d1d9e6;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    background-color: #fff;
+}
+
+.resume-file-name {
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
 }
 
 .resume-file-info p {
     margin: 0;
-    color: #0c5460;
+    display: flex;
+    align-items: center;
 }
 
 .upload-progress {
     height: 5px;
     margin-top: 10px;
     background-color: #e9ecef;
-    border-radius: 3px;
+    border-radius: 12px;
     overflow: hidden;
     display: none;
 }
@@ -100,17 +114,17 @@
 .upload-status {
     font-size: 12px;
     margin-top: 5px;
-    color: #333; /* Darker text for better visibility */
+    color: #333;
     display: none;
     transition: all 0.3s ease;
 }
 
 .upload-status.success {
-    color: #28a745;
+    /* color removed */
 }
 
 .upload-status.error {
-    color: #dc3545;
+    /* color removed */
 }
 
 /* Icon styles */
@@ -125,19 +139,19 @@
 }
 
 .icon-download {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="white"><path d="M8 12l-4-4h2.5V4h3v4H12L8 12zm-.5 4c-3.59 0-6.5-2.91-6.5-6.5S3.91 3 7.5 3 14 5.91 14 9.5 11.09 16 7.5 16z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="white"><path .../></svg>');
 }
 
 .icon-copy {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M4 4v10h10V4H4zm9 9H5V5h8v8zm-3-9H2v10h1V5h7V4z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="%230066cc"><path .../></svg>');
 }
 
 .icon-text {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230066cc"><path d="M13.5 1h-11C1.67 1 1 1.67 1 2.5v11c0 .83.67 1.5 1.5 1.5h11c.83 0 1.5-.67 1.5-1.5v-11c0-.83-.67-1.5-1.5-1.5zM5 13L2 7h2l2 4 2-4h2L7 13H5zm8-2h-4v-1h4v1zm0-2h-4v-1h4v1zm0-2h-4V6h4v1z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="%230066cc"><path .../></svg>');
 }
 
 .icon-file {
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%230c5460"><path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1zm3 13H4V2h4v4h4v8z"/></svg>');
+    background-image: url('data:image/svg+xml,<svg ... fill="%230c5460"><path .../></svg>');
 }
 
 /* Certification styles */
@@ -146,12 +160,17 @@
 }
 
 .certification-entry:hover {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 /* Language entry styles */
 .language-entry {
     align-items: center;
+    background-color: white;
+    border: 1px solid #d1d9e6;
+    border-radius: 12px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
 }
 
 @media (max-width: 768px) {
@@ -162,11 +181,305 @@
         flex-direction: column;
         align-items: flex-start;
     }
-    .btn-download-original {
-        margin-top: 8px;
-    }
 }
 
-.card-header h3, .card-header h4 {
-    color: white !important; /* Ensure headers in card headers are white */
+/* Fix inconsistent border-radius in profile sections */
+.profile-view .card,
+.profile-view .card-header,
+.edit-form .card,
+.edit-form .card-header {
+    border-radius: 12px;
+}
+
+.profile-view .card-header,
+.edit-form .card-header {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Ensure resume text area has consistent styling */
+.resume-text {
+    border-radius: 12px !important;
+}
+
+/* Ensure form controls in personal info and resume sections match other sections */
+.profile-view input,
+.profile-view textarea,
+.profile-view select,
+.edit-form input,
+.edit-form textarea,
+.edit-form select {
+    border-radius: 12px !important;
+}
+
+/* Fix resume file info display */
+.resume-file-info {
+    border-radius: 12px !important;
+}
+
+/* Ensure consistent button styling in profile section */
+.profile-view button,
+.profile-view .btn,
+.edit-form button,
+.edit-form .btn,
+.resume-toolbar button,
+.upload-container button {
+    outline: none !important;
+    transition: all 0.2s ease;
+}
+
+.profile-view button:hover,
+.profile-view .btn:hover,
+.edit-form button:hover,
+.edit-form .btn:hover,
+.resume-toolbar button:hover,
+.upload-container button:hover {
+    border-color: #2a829f;
+}
+
+/* Ensure remove buttons have consistent styling */
+.remove-cert:hover,
+.remove-language:hover,
+.remove-detail:hover,
+.remove-project:hover,
+.remove-job-title:hover,
+.remove-portfolio-link:hover,
+.remove-value:hover {
+    border-color: #ae506c;
+    background-color: #ae506c;
+    color: #ffffff;
+}
+
+/* Custom styling for text areas in profile section */
+.profile-view textarea:focus,
+.edit-form textarea:focus {
+    border-color: #2a829f !important;
+    box-shadow: 0 0 0 3px rgba(42, 130, 159, 0.25) !important;
+    outline: none !important;
+}
+
+/* Override browser's default text selection in profile sections */
+.profile-view ::selection,
+.edit-form ::selection {
+    background-color: rgba(42, 130, 159, 0.25);
+    color: #333;
+}
+
+/* Custom styling for resume text editor */
+.edit-form #user-resume:focus {
+    background-color: #ffff; /* Very light yellow for better readability when editing resume */
+}
+
+/* Improved form alignment in edit mode */
+.edit-form .mb-3,
+.edit-form .form-group {
+    margin-bottom: 1.5rem !important;
+}
+
+/* Enhanced input group alignment - make buttons appear as extensions of inputs */
+.edit-form .input-group {
+    margin-bottom: 0.5rem;
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+/* Fix input and button alignment in input groups */
+.edit-form .input-group .form-control {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    flex: 1;
+    margin-bottom: 0;
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
+    box-sizing: border-box;
+}
+
+/* Make remove buttons appear as extensions of the fields */
+.edit-form .input-group .btn,
+.edit-form .input-group button[class*="remove-"] {
+    margin-top: 0;
+    height: auto;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    border-left: 0;
+    min-height: 38px; /* Match Bootstrap's default input height */
+    max-height: 38px; /* Ensure buttons don't grow taller than inputs */
+    padding-left: 10px;
+    padding-right: 10px;
+    box-sizing: border-box;
+}
+
+/* Fix LinkedIn URL field specifically */
+.edit-form #linkedin_url {
+    height: 38px;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+/* Fix button alignment in general */
+.edit-form .btn {
+    line-height: 1.5;
+    vertical-align: middle;
+}
+
+/* Consistent styling for remove buttons */
+.edit-form button[class*="remove-"] {
+    background-color: #fff;
+    color: #6c757d;
+    border: 1px solid #ced4da;
+    border-left: none;
+}
+
+/* Special handling for language entry which uses a row instead of input-group */
+.edit-form .language-entry .col-md-2 button {
+    width: 100%;
+    height: 38px;
+    margin-top: 0;
+}
+
+/* Improved form alignment in edit mode */
+.edit-form .mb-3,
+.edit-form .form-group {
+    margin-bottom: 1.5rem !important;
+}
+
+/* Consistent alignment for input groups */
+.edit-form .input-group {
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+/* Align buttons within input groups */
+.edit-form .input-group .btn {
+    margin-top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Fix label alignment */
+.edit-form .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* Ensure consistent spacing in project entries */
+.edit-form .project-entry,
+.edit-form .certification-entry,
+.edit-form .language-entry {
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+/* Align buttons at the bottom of entries */
+.edit-form .remove-project,
+.edit-form .remove-cert,
+.edit-form .remove-language {
+    margin-top: 1rem;
+}
+
+/* Fix alignment of add buttons */
+.edit-form button[id^="add-"] {
+    margin-top: 0.5rem;
+}
+
+/* Give bottom padding to card body */
+.edit-form .card-body {
+    padding-bottom: 1.5rem;
+}
+
+/* Fix alignment in form check elements */
+.edit-form .form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.edit-form .form-check-input {
+    margin-top: 0;
+    margin-right: 0.5rem;
+}
+
+/* Adjust spacing for select elements */
+.edit-form select.form-select {
+    height: calc(2.25rem + 2px);
+}
+
+/* Style the download original button like a link */
+.btn-download-original {
+    background-color: transparent;
+    color: #2a829f;
+    border: none;
+    padding: 0 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    outline: none;
+    margin: 0 5px;
+    vertical-align: baseline;
+}
+
+.btn-download-original:hover {
+    background-color: transparent;
+    color: #1e6076;
+}
+
+/* Style the download original button as a link-like button at the right */
+.btn-download-original {
+    background-color: transparent;
+    color: #2a829f;
+    border: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    outline: none;
+}
+
+.btn-download-original:hover {
+    background-color: transparent;
+    color: #1e6076;
+}
+
+/* Make resume buttons styling consistent */
+.btn-copy, 
+.btn-download {
+    background-color: #ffffff;
+    color: #2a829f;
+    border: 1px solid #d1d9e6;
+    border-radius: 12px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0 5px;
+}
+
+/* Make lines more condensed in experience text */
+.resume-text p {
+    margin-top: 0;
+    margin-bottom: 0;
+    line-height: 1.2 !important;
+}
+
+/* Styling for Skills and Experiences section */
+.skills-experience-text {
+    background-color: #fff;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    padding: 10px 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #333;
+    margin: 0;
 }

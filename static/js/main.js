@@ -1,141 +1,76 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const searchForm = document.getElementById('job-search-form');
-    const resultsContainer = document.getElementById('results-container');
-    const jobResultsDiv = document.getElementById('job-results');
-    
-    searchForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const jobTitle = document.getElementById('job-title').value;
-        const location = document.getElementById('location').value;
-        
-        // Show loading indicator
-        jobResultsDiv.innerHTML = '<p>Searching for jobs...</p>';
-        resultsContainer.style.display = 'block';
-        
-        // Make API request to search for jobs
-        fetch('/api/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                job_title: jobTitle,
-                location: location
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply for Jobs - InstantApply</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auto_apply.css') }}">
+</head>
+<body>
+    <header class="top-header">
+        <div class="brand">INSTANTAPPLY</div>
+        <nav>
+            <ul class="nav-left" style="margin-left: 1.5rem;">
+                <li><a href="/profile">Profile</a></li>
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/applications">My Applications</a></li>
+            </ul>
+            <ul class="nav-right">
+                <li><a href="/logout">Log Out</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h2 class="page-slogan">One button is all you need</h2>
+        <section class="apply-section">
+            <div class="action-container">
+                <a href="#" class="button-bg">
+                    <!-- Replace with actual image -->
+                    <img src="{{ url_for('static', filename='images/cat_icon.svg') }}" alt="Applications Icon" class="button-icon">
+                    <span class="button-text">APPLY TO JOBS</span>
+                </a>
+                <div id="status" class="status-message"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 InstantApply</p>
+    </footer>
+
+    <script>
+        document.querySelector('.button-bg').addEventListener('click', function() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = "Applying to jobs... This may take a few moments.";
+            statusDiv.className = "status-message processing";
+
+            this.style.opacity = '0.5';
+
+            fetch('/api/auto-apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Display job results
-            displayJobResults(data.jobs);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            jobResultsDiv.innerHTML = '<p>An error occurred while searching for jobs. Please try again.</p>';
-        });
-    });
-    
-    function displayJobResults(jobs) {
-        if (!jobs || jobs.length === 0) {
-            jobResultsDiv.innerHTML = '<p>No jobs found matching your criteria. Please try a different search.</p>';
-            return;
-        }
-        
-        let html = '';
-        
-        jobs.forEach(job => {
-            html += `
-                <div class="job-card">
-                    <h3>${job.title}</h3>
-                    <p><strong>${job.company}</strong> - ${job.location}</p>
-                    <p class="job-description">${job.description_snippet || 'No description available'}</p>
-                    <button class="apply-btn" data-job-id="${job.id}">Apply Instantly</button>
-                </div>
-            `;
-        });
-        
-        jobResultsDiv.innerHTML = html;
-        
-        // Add event listeners to apply buttons
-        document.querySelectorAll('.apply-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const jobId = this.getAttribute('data-job-id');
-                applyForJob(jobId);
+            .then(response => response.json())
+            .then(data => {
+                this.style.opacity = '1';
+                if (data.message) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = "status-message success";
+                } else if (data.error) {
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = "status-message error";
+                } else {
+                    statusDiv.textContent = 'Unexpected response.';
+                    statusDiv.className = "status-message error";
+                }
+            })
+            .catch(error => {
+                this.style.opacity = '1';
+                statusDiv.textContent = 'Error during auto-apply: ' + error;
+                statusDiv.className = "status-message error";
             });
         });
-    }
-    
-    function applyForJob(jobId) {
-        // In a real application, this would check if the user is logged in
-        // and has completed their profile before applying
-        
-        // For demo purposes, we'll assume user ID 1
-        const userId = localStorage.getItem('userId') || 1;
-        
-        // Show application in progress message
-        alert('Your application is being submitted automatically. This process may take a moment...');
-        
-        fetch('/api/apply', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                job_id: jobId,
-                user_id: userId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(`Application submitted successfully! ${data.message}`);
-            } else {
-                alert(`Application submission failed: ${data.message}`);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while submitting your application. Please try again.');
-        });
-    }
-    
-    // Function to handle user profile creation/update
-    function setupUserProfileForm() {
-        const profileForm = document.getElementById('user-profile-form');
-        
-        if (profileForm) {
-            profileForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const formData = {
-                    name: document.getElementById('user-name').value,
-                    email: document.getElementById('user-email').value,
-                    resume: document.getElementById('user-resume').value,
-                    skills: document.getElementById('user-skills').value,
-                    experience: document.getElementById('user-experience').value
-                };
-                
-                fetch('/api/user', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    alert('Profile saved successfully!');
-                    // Store user ID in localStorage for later use
-                    localStorage.setItem('userId', data.id);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while saving your profile. Please try again.');
-                });
-            });
-        }
-    }
-    
-    // Initialize profile form if it exists
-    setupUserProfileForm();
-});
+    </script>
+</body>
+</html>

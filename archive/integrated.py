@@ -75,7 +75,7 @@ async def integration_test():
             
             # --- Part 2: Import and use Gemini and Document Parser functions ---
             try:
-                from utils.gemini_caller import generate_cover_letter, match_job_description, extract_resume_data
+                from archive.gemini_caller import generate_cover_letter, match_job_description, extract_resume_data
                 from utils.document_parser import parse_and_save_resume
                 
                 # Sample base64 encoded resume data (truncated for brevity)

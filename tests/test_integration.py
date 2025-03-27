@@ -1,4 +1,4 @@
-from utils.gemini_caller import generate_cover_letter, match_job_description
+from archive.gemini_caller import generate_cover_letter, match_job_description
 import unittest
 
 class InstantApplyServiceTest(unittest.TestCase):

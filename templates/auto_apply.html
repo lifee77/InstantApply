@@ -4,61 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apply for Jobs - InstantApply</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auto_apply.css') }}">
 </head>
 <body>
-    <header>
-        <h1>InstantApply</h1>
+    <header class="top-header">
+        <div class="brand">InstantApply</div>
         <nav>
-            <a href="/dashboard">Dashboard</a> |
-            <a href="/profile">Profile</a> |
-            <a href="/applications">My Applications</a> |
-            <a href="/logout">Logout</a>
+            <ul class="nav-left" style="margin-left: 1.5rem;"> <!-- added space from left edge -->
+                <li><a href="/profile">Profile</a></li>
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/applications">My Applications</a></li>
+            </ul>
+            <ul class="nav-right">
+                <li><a href="/logout">Log Out</a></li>
+            </ul>
         </nav>
     </header>
-    
+
     <main>
+        <h2 class="page-slogan">One button is all you need.</h2>
         <section class="apply-section">
-            <p class="description">One button is all you need!!</p>
-            
             <div class="action-container">
-                <button id="applyBtn" class="apply-button">Apply to All Pending Jobs</button>
+                <a href="#" class="button-bg">
+                    <!-- Replace with actual image -->
+                    <img src="{{ url_for('static', filename='images/cat_icon.svg') }}" alt="Applications Icon" class="button-icon">
+                    <span class="button-text">Apply to Jobs</span>
+                    <span class="button-subtext">We'll apply to all pending jobs automatically.</span>
+                </a>
                 <div id="status" class="status-message"></div>
             </div>
-            
         </section>
     </main>
-    
+
     <footer>
         <p>&copy; 2025 InstantApply</p>
     </footer>
 
     <script>
-        document.getElementById("applyBtn").addEventListener("click", function() {
-            const statusDiv = document.getElementById("status");
+        // Example JS for button click
+        document.querySelector('.button-bg').addEventListener('click', function() {
+            const statusDiv = document.getElementById('status');
             statusDiv.textContent = "Applying to jobs... This may take a few moments.";
             statusDiv.className = "status-message processing";
-            
+
             // Disable button during processing
-            this.disabled = true;
-            this.textContent = "Processing...";
-            
-            // Call the auto-apply endpoint
+            this.style.pointerEvents = 'none';
+            this.style.opacity = '0.5';
+
+            // Example fetch call
             fetch('/api/auto-apply', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             })
             .then(response => response.json())
             .then(data => {
-                // Re-enable button
-                this.disabled = false;
-                this.textContent = "Apply to All Pending Jobs";
-                
-                if(data.message) {
+                this.style.pointerEvents = 'auto';
+                this.style.opacity = '1';
+                if (data.message) {
                     statusDiv.textContent = data.message;
                     statusDiv.className = "status-message success";
-                } else if(data.error) {
+                } else if (data.error) {
                     statusDiv.textContent = 'Error: ' + data.error;
                     statusDiv.className = "status-message error";
                 } else {
@@ -67,10 +73,8 @@
                 }
             })
             .catch(error => {
-                // Re-enable button
-                this.disabled = false;
-                this.textContent = "Apply to All Pending Jobs";
-                
+                this.style.pointerEvents = 'auto';
+                this.style.opacity = '1';
                 statusDiv.textContent = 'Error during auto-apply: ' + error;
                 statusDiv.className = "status-message error";
             });

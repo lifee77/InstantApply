@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const profileView = document.getElementById('profile-view');
     const profileEdit = document.getElementById('profile-edit');
     const btnEditProfile = document.getElementById('btn-edit-profile');
+    const btnCancelEdit = document.getElementById('btn-cancel-edit');
 
     btnEditProfile.addEventListener('click', function() {
         profileView.style.display = 'none';
@@ -10,15 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => window.scrollTo(0, 0), 10);
     });
 
-    const submitButton = document.querySelector('#profile-edit button[type="submit"]');
-    const cancelButton = document.createElement('button');
-    cancelButton.id = 'btn-cancel-edit';
-    cancelButton.type = 'button';
-    cancelButton.className = 'btn btn-secondary btn-lg ms-2';
-    cancelButton.textContent = 'Cancel';
-    submitButton.parentNode.insertBefore(cancelButton, submitButton.nextSibling);
-
-    cancelButton.addEventListener('click', function() {
+    // Use the existing cancel button instead of creating a new one
+    btnCancelEdit.addEventListener('click', function() {
         profileEdit.style.display = 'none';
         profileView.style.display = 'block';
     });
@@ -90,14 +84,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const uploadProgress = document.querySelector('.upload-progress');
-            const progressBar = document.getElementById('upload-progress-bar');
-            const uploadStatus = document.getElementById('upload-status');
-
-            uploadProgress.style.display = 'block';
-            uploadStatus.style.display = 'block';
-            uploadStatus.textContent = 'Reading file...';
-            uploadStatus.className = 'upload-status mt-2';
 
             if (file.type === 'text/plain') {
                 const reader = new FileReader();
@@ -212,7 +198,7 @@ function addJobTitleField(value = '') {
     div.className = 'input-group mb-2';
     div.innerHTML = `
         <input type="text" class="form-control job-title" value="${value}" placeholder="e.g., Software Engineer">
-        <button type="button" class="btn btn-outline-secondary remove-job-title">Remove</button>
+        <button type="button" class="btn remove-job-title">Remove</button>
     `;
     container.appendChild(div);
     div.querySelector('.remove-job-title').addEventListener('click', () => container.removeChild(div));
@@ -225,7 +211,7 @@ function addPortfolioLinkField(value = '') {
     div.className = 'input-group mb-2';
     div.innerHTML = `
         <input type="url" class="form-control portfolio-link" value="${value}" placeholder="https://github.com/yourusername">
-        <button type="button" class="btn btn-outline-secondary remove-portfolio-link">Remove</button>
+        <button type="button" class="btn remove-portfolio-link">Remove</button>
     `;
     container.appendChild(div);
     div.querySelector('.remove-portfolio-link').addEventListener('click', () => container.removeChild(div));
@@ -251,7 +237,7 @@ function addCertificationField(cert = {}) {
                 <input type="date" class="form-control cert-expiry" value="${cert.expiry || ''}">
             </div>
         </div>
-        <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-cert">Remove</button>
+        <button type="button" class="btn btn-sm mt-3 remove-cert">Remove</button>
     `;
     container.appendChild(div);
     div.querySelector('.remove-cert').addEventListener('click', () => container.removeChild(div));
@@ -273,7 +259,7 @@ function addLanguageField(lang = {}) {
             <select class="form-select language-proficiency">${proficiencyOptions}</select>
         </div>
         <div class="col-md-2">
-            <button type="button" class="btn btn-outline-danger remove-language">Remove</button>
+            <button type="button" class="btn remove-language">Remove</button>
         </div>
     `;
     container.appendChild(div);
@@ -287,7 +273,7 @@ function addValueField(value = '') {
     div.className = 'input-group mb-2';
     div.innerHTML = `
         <input type="text" class="form-control value-item" value="${value}" placeholder="e.g., Innovation">
-        <button type="button" class="btn btn-outline-secondary remove-value">Remove</button>
+        <button type="button" class="btn remove-value">Remove</button>
     `;
     container.appendChild(div);
     div.querySelector('.remove-value').addEventListener('click', () => container.removeChild(div));
@@ -320,13 +306,13 @@ function addProjectField(project = {}) {
             <label class="form-label">Technologies Used</label>
             <div class="tech-tags-container mb-2">
                 ${(project.technologies || []).map(tech => 
-                    `<span class="badge bg-secondary me-1 mb-1 tech-tag">
-                        ${tech}<button type="button" class="btn-close btn-close-white ms-1" aria-label="Remove"></button>
+                    `<span class="badge me-1 mb-1 tech-tag">
+                        ${tech}<button type="button" class="btn-close ms-1" aria-label="Remove"></button>
                     </span>`).join('')}
             </div>
             <div class="input-group">
                 <input type="text" class="form-control" id="${techInputId}" placeholder="Type a technology and press Enter (e.g., React)">
-                <button type="button" class="btn btn-outline-primary add-tech">Add</button>
+                <button type="button" class="btn add-tech">Add</button>
             </div>
         </div>
         <div class="mb-3 project-details-container">
@@ -335,14 +321,14 @@ function addProjectField(project = {}) {
                 ${(project.details || []).map(detail => 
                     `<div class="input-group mb-2 detail-entry">
                         <input type="text" class="form-control project-detail" value="${detail}" placeholder="e.g., Implemented responsive design">
-                        <button type="button" class="btn btn-outline-danger remove-detail">Remove</button>
+                        <button type="button" class="btn remove-detail">Remove</button>
                     </div>`).join('')}
             </div>
-            <button type="button" class="btn btn-outline-secondary btn-sm add-project-detail">
+            <button type="button" class="btn btn-sm add-project-detail">
                 <i class="bi bi-plus"></i> Add Detail
             </button>
         </div>
-        <button type="button" class="btn btn-outline-danger btn-sm mt-3 remove-project">Remove Project</button>
+        <button type="button" class="btn btn-sm mt-3 remove-project">Remove Project</button>
     `;
     
     container.appendChild(div);
@@ -359,7 +345,7 @@ function addProjectField(project = {}) {
         detailDiv.className = 'input-group mb-2 detail-entry';
         detailDiv.innerHTML = `
             <input type="text" class="form-control project-detail" placeholder="e.g., Implemented responsive design">
-            <button type="button" class="btn btn-outline-danger remove-detail">Remove</button>
+            <button type="button" class="btn remove-detail">Remove</button>
         `;
         detailsContainer.appendChild(detailDiv);
         
@@ -385,10 +371,10 @@ function addProjectField(project = {}) {
         if (!techName.trim()) return;
         
         const tagSpan = document.createElement('span');
-        tagSpan.className = 'badge bg-secondary me-1 mb-1 tech-tag';
+        tagSpan.className = 'badge me-1 mb-1 tech-tag';
         tagSpan.innerHTML = `
             ${techName.trim()}
-            <button type="button" class="btn-close btn-close-white ms-1" aria-label="Remove"></button>
+            <button type="button" class="btn-close ms-1" aria-label="Remove"></button>
         `;
         tagsContainer.appendChild(tagSpan);
         

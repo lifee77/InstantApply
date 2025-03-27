@@ -1,56 +1,72 @@
 import logging
-import asyncio
 from playwright.async_api import async_playwright
 
 logger = logging.getLogger(__name__)
+
 async def get_playwright_instance():
     playwright = await async_playwright().start()
     return playwright
 
 async def launch_browser(playwright, headless: bool = False, slow_mo: int = 200, test_mode: bool = True):
     """
-    Launch a Playwright browser instance with fallback logic.
- 
+    Launch a browser with fallback support for multiple engines.
+    
     Args:
-        playwright: An instance of the Playwright object.
-        headless (bool): Whether to run the browser in headless mode.
-        slow_mo (int): Delay in ms between actions to slow down browser actions.
-        test_mode (bool): If True, disables submit buttons to prevent accidental submissions.
- 
+        playwright: Playwright instance
+        headless: Whether to run browser in headless mode
+        slow_mo: Delay between actions for more human-like behavior
+        test_mode: Whether to run in test mode (prevents form submission)
+        
     Returns:
-        A tuple of (browser, context)
+        tuple: (browser, context)
     """
-    for browser_type in [playwright.chromium, playwright.firefox, playwright.webkit]:
+    # Try different browser engines in order of preference
+    browser_types = [
+        (playwright.chromium, "chromium", ["--no-sandbox"]),
+        (playwright.firefox, "firefox", []),
+        (playwright.webkit, "webkit", [])
+    ]
+    
+    for browser_type, name, args in browser_types:
         try:
+            logger.info(f"Attempting to launch browser using {name}")
             browser = await browser_type.launch(
                 headless=headless,
                 slow_mo=slow_mo,
-                args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
+                args=args
             )
-            context = await browser.new_context()
-            logger.info(f"Browser launched using {browser_type.name}")
-            selected_browser = browser_type.name
- 
+            
+            # Create a persistent context
+            context = await browser.new_context(
+                viewport={"width": 1280, "height": 960},
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36"
+            )
+            
+            # Apply test mode to prevent actual submissions if needed
             if test_mode:
+                # Create and close a page just to add the init script to all future pages
                 page = await context.new_page()
                 await page.add_init_script("""
-    document.addEventListener('DOMContentLoaded', () => {
-        const buttons = document.querySelectorAll('button[type="submit"], input[type="submit"]');
-        buttons.forEach(btn => {
-            btn.disabled = true;
-            btn.style.border = '2px solid red';
-            btn.title = 'Disabled in test mode';
-        });
-    });
-""")
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const buttons = document.querySelectorAll('button[type="submit"], input[type="submit"]');
+                        buttons.forEach(btn => {
+                            btn.disabled = true;
+                            btn.style.border = '2px solid red';
+                            btn.title = 'Disabled in test mode';
+                        });
+                    });
+                """)
                 await page.close()
- 
-            logger.info(f"Returning browser instance using {selected_browser}")
+            
+            logger.info(f"Successfully launched {name}")
+            logger.info(f"Returning browser instance using {name}")
             return browser, context
+            
         except Exception as e:
-            logger.warning(f"Failed to launch {browser_type.name}: {str(e)}")
- 
+            logger.warning(f"Failed to launch {name}: {str(e)}")
+    
     raise RuntimeError("Failed to launch any supported browser.")
+
 
 async def create_new_page(context):
     """

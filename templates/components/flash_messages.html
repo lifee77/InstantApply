@@ -5,5 +5,46 @@
                 <div class="alert alert-{{ category }}">{{ message }}</div>
             {% endfor %}
         </div>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handling duplicate messages
+                const successAlerts = document.querySelectorAll('.alert-success');
+                const seenMessages = {};
+                
+                // First pass: identify duplicate messages
+                successAlerts.forEach(function(alert) {
+                    const messageText = alert.textContent.trim();
+                    if (!seenMessages[messageText]) {
+                        seenMessages[messageText] = { 
+                            element: alert, 
+                            count: 1 
+                        };
+                    } else {
+                        seenMessages[messageText].count++;
+                        // Hide duplicates
+                        alert.style.display = 'none';
+                    }
+                });
+                
+                // Auto-hide remaining success messages after timeout
+                Object.values(seenMessages).forEach(function(item) {
+                    const alert = item.element;
+                    const messageText = alert.textContent.toLowerCase();
+                    if (messageText.includes('resume') || 
+                        messageText.includes('registration') || 
+                        messageText.includes('login')) {
+                        
+                        setTimeout(function() {
+                            alert.style.transition = 'opacity 0.3s';
+                            alert.style.opacity = '0';
+                            setTimeout(function() {
+                                alert.remove();
+                            }, 300);
+                        }, 3000);
+                    }
+                });
+            });
+        </script>
     {% endif %}
 {% endwith %}
