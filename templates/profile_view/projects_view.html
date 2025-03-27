@@ -7,11 +7,7 @@
             <div class="projects-list">
                 {% set projects = [] %}
                 {% if current_user.projects is string and current_user.projects.startswith('[') %}
-                    {% try %}
-                        {% set projects = current_user.projects | from_json %}
-                    {% except %}
-                        {% set projects = [{'name': 'Project parsing error', 'description': 'Unable to parse project data'}] %}
-                    {% endtry %}
+                    {% set projects = current_user.projects | from_json %}
                 {% else %}
                     {% set projects = current_user.projects %}
                 {% endif %}

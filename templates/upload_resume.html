@@ -236,36 +236,44 @@ document.addEventListener('DOMContentLoaded', function() {
     let parsingTimeoutId = null;
     
     // Add click event listener specifically for the upload button
-    uploadButton.addEventListener('click', function(e) {
+    uploadButton.addEventListener('click', function() {
         // Only show parsing status when the button is clicked
         if (resumeFileInput.files.length) {
             parsingStatus.style.display = 'block';
             parsingError.style.display = 'none';
             uploadButton.disabled = true;
+            
+            // Important: Submit the form through JavaScript after showing the message
+            // Use setTimeout to ensure the parsing status is displayed before submission
+            setTimeout(function() {
+                uploadForm.submit();
+            }, 100);
         }
     });
     
+    // Modify form submission handler to not interfere with our custom button handler
     uploadForm.addEventListener('submit', function(e) {
-        // Only set timeout if a file is actually selected
-        if (resumeFileInput.files.length) {
-            // Clear any existing timeout
-            if (parsingTimeoutId) {
-                clearTimeout(parsingTimeoutId);
-            }
-            
-            // Set timeout to show error if parsing takes too long
-            parsingTimeoutId = setTimeout(function() {
-                // If form hasn't been submitted successfully by now, show error
-                if (parsingStatus.style.display === 'block') {
-                    parsingStatus.style.display = 'none';
-                    parsingError.style.display = 'block';
-                    uploadButton.disabled = false;
+        // Only set timeout if the form is being submitted (not by our button)
+        if (!e.submitter || e.submitter !== uploadButton) {
+            if (resumeFileInput.files.length) {
+                // Set timeout to show error if parsing takes too long
+                if (parsingTimeoutId) {
+                    clearTimeout(parsingTimeoutId);
                 }
-            }, 30000); // 30 seconds timeout
-        } else {
-            // No file selected, prevent form submission
-            e.preventDefault();
-            alert('Please select a resume file first.');
+                
+                parsingTimeoutId = setTimeout(function() {
+                    // If form hasn't been submitted successfully by now, show error
+                    if (parsingStatus.style.display === 'block') {
+                        parsingStatus.style.display = 'none';
+                        parsingError.style.display = 'block';
+                        uploadButton.disabled = false;
+                    }
+                }, 30000); // 30 seconds timeout
+            } else {
+                // No file selected, prevent form submission
+                e.preventDefault();
+                alert('Please select a resume file first.');
+            }
         }
     });
 });
