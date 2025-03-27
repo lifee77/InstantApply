@@ -89,8 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     userResumeTextarea.value = e.target.result;
-                    uploadStatus.textContent = 'Text file loaded successfully.';
-                    uploadStatus.classList.add('success');
+                    uploadStatus.textContent = 'Text file selected. Click "Save Profile" to process.';
                     progressBar.style.width = '100%';
                     parseResumeAndFillFields(e.target.result);
                 };
@@ -103,7 +102,6 @@ document.addEventListener('DOMContentLoaded', function() {
                       file.type === 'application/msword' || 
                       file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                 uploadStatus.textContent = `${file.name} selected. Text will be extracted when you save.`;
-                uploadStatus.classList.add('success');
                 progressBar.style.width = '100%';
                 if (userResumeTextarea.value === '') {
                     userResumeTextarea.value = 'Your resume text will be extracted from ' + file.name + ' when you save the profile.';

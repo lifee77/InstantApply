@@ -107,6 +107,38 @@ def profile():
         current_user.work_style = request.form.get('work_style')
         current_user.industry_attraction = request.form.get('industry_attraction')
         
+        # Process demographic information fields
+        current_user.race_ethnicity = request.form.get('race_ethnicity')
+        current_user.gender = request.form.get('gender')
+        
+        # Process graduation date
+        grad_date = request.form.get('graduation_date')
+        if grad_date:
+            try:
+                current_user.graduation_date = datetime.datetime.strptime(grad_date, '%Y-%m-%d').date()
+            except ValueError:
+                current_user.graduation_date = None
+        else:
+            current_user.graduation_date = None
+        
+        current_user.disability_status = request.form.get('disability_status')
+        current_user.military_status = request.form.get('military_status')
+        current_user.military_branch = request.form.get('military_branch')
+        
+        # Process military discharge date
+        discharge_date = request.form.get('military_discharge_date')
+        if discharge_date:
+            try:
+                current_user.military_discharge_date = datetime.datetime.strptime(discharge_date, '%Y-%m-%d').date()
+            except ValueError:
+                current_user.military_discharge_date = None
+        else:
+            current_user.military_discharge_date = None
+            
+        current_user.veteran_status = request.form.get('veteran_status')
+        current_user.needs_sponsorship = 'needs_sponsorship' in request.form
+        current_user.visa_status = request.form.get('visa_status')
+        
         # Process resume text
         current_user.resume = request.form.get('resume', '')
         

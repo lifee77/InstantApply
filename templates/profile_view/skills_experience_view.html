@@ -14,21 +14,35 @@
             <div class="skills-experience-text">
                 {% set experiences = current_user.experience | from_json %}
                 {% for exp in experiences %}
-                    <!-- Single paragraph for the role/company/location -->
+                    <!-- Single paragraph for the title/company/dates -->
                     <p>
-                        {% set header_parts = [] %}
-                        {% if exp.role %}{% set _ = header_parts.append(exp.role) %}{% endif %}
-                        {% if exp.company %}{% set _ = header_parts.append(exp.company) %}{% endif %}
-                        {% if exp.location %}{% set _ = header_parts.append(exp.location) %}{% endif %}
-                        {{ header_parts | join(', ') }}
+                        <strong>
+                            {% if exp.title %}{{ exp.title }}{% endif %}
+                            {% if exp.company %}{{ " at " + exp.company }}{% endif %}
+                            {% if exp.dates %}{{ " (" + exp.dates + ")" }}{% endif %}
+                        </strong>
                     </p>
-
-                    <!-- Single paragraph for all responsibilities -->
-                    <p>
-                        {% for resp in exp.responsibilities %}
-                            • {{ resp }}<br>
-                        {% endfor %}
-                    </p>
+                    <!-- Single paragraph for all responsibilities/description -->
+                    {% if exp.description %}
+                        <ul>
+                            {% if exp.description is string %}
+                                <li>{{ exp.description }}</li>
+                            {% else %}
+                                {% for item in exp.description %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                    
+                    <!-- Support for old format if present -->
+                    {% if exp.responsibilities %}
+                        <ul>
+                            {% for resp in exp.responsibilities %}
+                                <li>{{ resp }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
                 {% endfor %}
             </div>
         {% endif %}

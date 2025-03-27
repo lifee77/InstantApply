@@ -74,7 +74,7 @@
     }
     
     .parsing-status {
-        display: none;
+        display: none !important;
         margin-top: 20px;
     }
     
@@ -85,7 +85,7 @@
     }
     
     .parsing-error {
-        display: none;
+        display: none !important;
         margin-top: 20px;
         color: #dc3545;
     }
@@ -161,6 +161,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const parsingStatus = document.getElementById('parsing-status');
     const parsingError = document.getElementById('parsing-error');
     
+    // Make sure they're hidden on page load
+    parsingStatus.style.display = 'none';
+    parsingError.style.display = 'none';
+    
     // Only handle click on browse button, not on upload area
     browseButton.addEventListener('click', function(e) {
         e.stopPropagation(); // Stop event from bubbling up to upload area
@@ -228,26 +232,48 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadButton.disabled = true;
     });
     
-    // Handle form submission with timeout - improved logic
-    uploadForm.addEventListener('submit', function(e) {
-        // Only show parsing status and set timeout if a file is actually selected
+    // Handle form submission with improved logic
+    let parsingTimeoutId = null;
+    
+    // Add click event listener specifically for the upload button
+    uploadButton.addEventListener('click', function() {
+        // Only show parsing status when the button is clicked
         if (resumeFileInput.files.length) {
             parsingStatus.style.display = 'block';
+            parsingError.style.display = 'none';
             uploadButton.disabled = true;
             
-            // Set timeout to show error if parsing takes too long
+            // Important: Submit the form through JavaScript after showing the message
+            // Use setTimeout to ensure the parsing status is displayed before submission
             setTimeout(function() {
-                // If form hasn't been submitted successfully by now, show error
-                if (parsingStatus.style.display === 'block') {
-                    parsingStatus.style.display = 'none';
-                    parsingError.style.display = 'block';
-                    uploadButton.disabled = false;
+                uploadForm.submit();
+            }, 100);
+        }
+    });
+    
+    // Modify form submission handler to not interfere with our custom button handler
+    uploadForm.addEventListener('submit', function(e) {
+        // Only set timeout if the form is being submitted (not by our button)
+        if (!e.submitter || e.submitter !== uploadButton) {
+            if (resumeFileInput.files.length) {
+                // Set timeout to show error if parsing takes too long
+                if (parsingTimeoutId) {
+                    clearTimeout(parsingTimeoutId);
                 }
-            }, 30000); // 30 seconds timeout
-        } else {
-            // No file selected, prevent form submission
-            e.preventDefault();
-            alert('Please select a resume file first.');
+                
+                parsingTimeoutId = setTimeout(function() {
+                    // If form hasn't been submitted successfully by now, show error
+                    if (parsingStatus.style.display === 'block') {
+                        parsingStatus.style.display = 'none';
+                        parsingError.style.display = 'block';
+                        uploadButton.disabled = false;
+                    }
+                }, 30000); // 30 seconds timeout
+            } else {
+                // No file selected, prevent form submission
+                e.preventDefault();
+                alert('Please select a resume file first.');
+            }
         }
     });
 });

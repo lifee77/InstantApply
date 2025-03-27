@@ -1,8 +1,8 @@
 # InstantApply
 
 A platform to streamline job applications.
-Demo Video: https://drive.google.com/drive/folders/1MXEEPN3f61T9VI8zWsxLmzQC34YKX91r?usp=sharing
-Hosted: https://app.near.ai/agents/quickzebra7715.near/InstantApply/latest
+### Demo: https://drive.google.com/drive/folders/1MXEEPN3f61T9VI8zWsxLmzQC34YKX91r?usp=sharing
+## Hosted: https://instantapply.onrender.com/
 
 ## Development Setup
 
@@ -11,6 +11,7 @@ Hosted: https://app.near.ai/agents/quickzebra7715.near/InstantApply/latest
 - Python 3.8+
 - pip
 - virtualenv (recommended)
+- poppler (install via homebrew for Mac)
 
 ### Installation
 
