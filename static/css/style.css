@@ -17,6 +17,7 @@ html, body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
     color: #111;
     padding-bottom: 60px;
+    
 }
 
 
@@ -87,6 +88,8 @@ h1 {
 main {
     max-width: 800px;
     margin: 0 auto;
+    flex: 1;
+    padding-top: 50px; /* Added inline style for padding */
 }
 
 .search-section,
@@ -295,4 +298,12 @@ select:focus {
     border-color: #2a829f;
     box-shadow: 0 0 0 3px rgba(42, 130, 159, 0.25);
     outline: none;
+}
+
+
+.remember-me {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
 }
