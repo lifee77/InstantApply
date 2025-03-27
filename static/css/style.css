@@ -182,11 +182,12 @@ input[type="submit"]:focus {
 
 .card-header {
     color: #fff;
-    background-color: #2a829f;
+    background-color: #2e8faf;
     border: 1px solid #d1d9e6;
     border-radius: 12px;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+    padding: 0rem 1rem;
 }
 
 .results-section {

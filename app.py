@@ -64,6 +64,14 @@ def create_app():
     if app.debug:
         app.register_blueprint(debug_bp)
 
+    
+    @app.template_filter('from_json')
+    def from_json_filter(s):
+        try:
+            return json.loads(s)
+        except Exception:
+            return [] 
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))

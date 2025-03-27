@@ -22,7 +22,7 @@
     line-height: 1.5;
 }
 
-.profile-view .resume-text {
+.profile-view .resume-text, .experience-text {
     white-space: pre-wrap;
     background-color: #f9f9f9;
     padding: 15px;
@@ -460,4 +460,26 @@
     cursor: pointer;
     transition: all 0.2s ease;
     margin: 0 5px;
+}
+
+/* Make lines more condensed in experience text */
+.resume-text p {
+    margin-top: 0;
+    margin-bottom: 0;
+    line-height: 1.2 !important;
+}
+
+/* Styling for Skills and Experiences section */
+.skills-experience-text {
+    background-color: #fff;
+    border: 1px solid #d1d9e6;
+    border-radius: 8px;
+    padding: 10px 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #333;
+    margin: 0;
 }

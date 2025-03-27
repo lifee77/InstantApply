@@ -5,11 +5,32 @@
     <div class="card-body">
         {% if current_user.skills %}
             <h4>Skills</h4>
-            <p>{{ current_user.skills }}</p>
+            <p>
+                {{ current_user.skills | replace('[','') | replace(']','') | replace('"','') }}
+            </p>
         {% endif %}
         {% if current_user.experience %}
             <h4>Experience</h4>
-            <div class="resume-text">{{ current_user.experience }}</div>
+            <div class="skills-experience-text">
+                {% set experiences = current_user.experience | from_json %}
+                {% for exp in experiences %}
+                    <!-- Single paragraph for the role/company/location -->
+                    <p>
+                        {% set header_parts = [] %}
+                        {% if exp.role %}{% set _ = header_parts.append(exp.role) %}{% endif %}
+                        {% if exp.company %}{% set _ = header_parts.append(exp.company) %}{% endif %}
+                        {% if exp.location %}{% set _ = header_parts.append(exp.location) %}{% endif %}
+                        {{ header_parts | join(', ') }}
+                    </p>
+
+                    <!-- Single paragraph for all responsibilities -->
+                    <p>
+                        {% for resp in exp.responsibilities %}
+                            • {{ resp }}<br>
+                        {% endfor %}
+                    </p>
+                {% endfor %}
+            </div>
         {% endif %}
         {% if current_user.desired_job_titles %}
             <h4>Desired Job Titles</h4>

@@ -84,14 +84,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const uploadProgress = document.querySelector('.upload-progress');
-            const progressBar = document.getElementById('upload-progress-bar');
-            const uploadStatus = document.getElementById('upload-status');
-
-            uploadProgress.style.display = 'block';
-            uploadStatus.style.display = 'block';
-            uploadStatus.textContent = 'Reading file...';
-            uploadStatus.className = 'upload-status mt-2';
 
             if (file.type === 'text/plain') {
                 const reader = new FileReader();
