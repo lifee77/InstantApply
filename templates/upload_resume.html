@@ -228,15 +228,22 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadButton.disabled = true;
     });
     
-    // Handle form submission with timeout - improved logic
+    // Handle form submission with improved logic
+    let parsingTimeoutId = null;
+    
     uploadForm.addEventListener('submit', function(e) {
         // Only show parsing status and set timeout if a file is actually selected
         if (resumeFileInput.files.length) {
             parsingStatus.style.display = 'block';
             uploadButton.disabled = true;
             
+            // Clear any existing timeout
+            if (parsingTimeoutId) {
+                clearTimeout(parsingTimeoutId);
+            }
+            
             // Set timeout to show error if parsing takes too long
-            setTimeout(function() {
+            parsingTimeoutId = setTimeout(function() {
                 // If form hasn't been submitted successfully by now, show error
                 if (parsingStatus.style.display === 'block') {
                     parsingStatus.style.display = 'none';
