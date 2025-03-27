@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Job Recommendations{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Job Recommendations</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-3">
+                <div>
+                    <h5 class="card-title">Recommended Jobs</h5>
+                    <p class="text-muted">Jobs matched to your profile and preferences</p>
+                </div>
+                <div>
+                    <button id="refreshRecommendations" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Refresh Recommendations
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="input-group">
+                    <input type="text" id="jobSearchInput" class="form-control" placeholder="Search in recommendations...">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <select id="sortOptions" class="form-control">
+                        <option value="match_score_desc">Match Score (High to Low)</option>
+                        <option value="match_score_asc">Match Score (Low to High)</option>
+                        <option value="date_desc">Date (Newest First)</option>
+                        <option value="date_asc">Date (Oldest First)</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="locationFilter" class="form-control">
+                        <option value="">All Locations</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="companyFilter" class="form-control">
+                        <option value="">All Companies</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            
+            <div id="recommendationsLoader" class="text-center py-4 d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading recommendations...</p>
+            </div>
+            
+            <div id="recommendationsContainer">
+                <!-- Job recommendations will be loaded here -->
+                <div class="text-center py-4 d-none" id="noRecommendations">
+                    <p>No job recommendations found. Click "Refresh Recommendations" to generate new ones.</p>
+                </div>
+                
+                <div id="recommendationsList" class="list-group">
+                    <!-- Job recommendations will be populated here -->
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <div>
+                    <span id="showingCount">Showing 0 of 0 recommendations</span>
+                </div>
+                <div>
+                    <nav aria-label="Recommendations pagination">
+                        <ul class="pagination" id="recommendationsPagination">
+                            <!-- Pagination will be populated here -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job recommendation template -->
+<template id="job-recommendation-template">
+    <div class="list-group-item recommendation-item">
+        <div class="d-flex justify-content-between">
+            <div>
+                <h5 class="mb-1 job-title"></h5>
+                <div class="d-flex mb-2">
+                    <span class="mr-3 company-name"></span>
+                    <span class="text-muted job-location"></span>
+                </div>
+                <p class="mb-1 job-description"></p>
+                <div class="mt-2">
+                    <span class="badge badge-primary match-score"></span>
+                    <span class="badge badge-light job-date"></span>
+                </div>
+            </div>
+            <div class="ml-3 d-flex flex-column justify-content-between align-items-end">
+                <div>
+                    <button class="btn btn-sm btn-success apply-btn">
+                        <i class="fas fa-paper-plane"></i> Apply
+                    </button>
+                </div>
+                <div class="mt-auto">
+                    <a href="#" class="btn btn-sm btn-outline-secondary view-job-details">
+                        <i class="fas fa-external-link-alt"></i> View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Variables
+        const recommendationsList = document.getElementById('recommendationsList');
+        const recommendationsLoader = document.getElementById('recommendationsLoader');
+        const noRecommendations = document.getElementById('noRecommendations');
+        const showingCount = document.getElementById('showingCount');
+        const refreshButton = document.getElementById('refreshRecommendations');
+        const jobSearchInput = document.getElementById('jobSearchInput');
+        const sortOptions = document.getElementById('sortOptions');
+        const locationFilter = document.getElementById('locationFilter');
+        const companyFilter = document.getElementById('companyFilter');
+        const paginationContainer = document.getElementById('recommendationsPagination');
+        const template = document.getElementById('job-recommendation-template');
+        
+        // Recommendation data
+        let allRecommendations = [];
+        let filteredRecommendations = [];
+        const itemsPerPage = 10;
+        let currentPage = 1;
+        
+        // Initialize the recommendations
+        loadRecommendations();
+        
+        // Event listeners
+        refreshButton.addEventListener('click', refreshRecommendations);
+        jobSearchInput.addEventListener('input', filterRecommendations);
+        sortOptions.addEventListener('change', sortRecommendations);
+        locationFilter.addEventListener('change', filterRecommendations);
+        companyFilter.addEventListener('change', filterRecommendations);
+        
+        // Functions
+        function loadRecommendations() {
+            showLoader();
+            
+            fetch('/api/recommendations')
+                .then(response => response.json())
+                .then(data => {
+                    allRecommendations = data.recommendations || [];
+                    populateFilters();
+                    filterRecommendations();
+                })
+                .catch(error => {
+                    console.error('Error loading recommendations:', error);
+                    hideLoader();
+                    showNoRecommendations();
+                });
+        }
+        
+        function refreshRecommendations() {
+            showLoader();
+            
+            fetch('/api/recommendations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadRecommendations();
+                } else {
+                    console.error('Failed to refresh recommendations');
+                    hideLoader();
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing recommendations:', error);
+                hideLoader();
+            });
+        }
+        
+        function filterRecommendations() {
+            const searchTerm = jobSearchInput.value.toLowerCase();
+            const selectedLocation = locationFilter.value.toLowerCase();
+            const selectedCompany = companyFilter.value.toLowerCase();
+            
+            filteredRecommendations = allRecommendations.filter(job => {
+                const matchesSearch = !searchTerm || 
+                    job.title.toLowerCase().includes(searchTerm) || 
+                    job.company.toLowerCase().includes(searchTerm) || 
+                    job.description.toLowerCase().includes(searchTerm);
+                
+                const matchesLocation = !selectedLocation || 
+                    job.location.toLowerCase() === selectedLocation;
+                
+                const matchesCompany = !selectedCompany || 
+                    job.company.toLowerCase() === selectedCompany;
+                
+                return matchesSearch && matchesLocation && matchesCompany;
+            });
+            
+            sortRecommendations();
+        }
+        
+        function sortRecommendations() {
+            const sortOption = sortOptions.value;
+            
+            filteredRecommendations.sort((a, b) => {
+                switch (sortOption) {
+                    case 'match_score_desc':
+                        return b.match_score - a.match_score;
+                    case 'match_score_asc':
+                        return a.match_score - b.match_score;
+                    case 'date_desc':
+                        return new Date(b.date_posted) - new Date(a.date_posted);
+                    case 'date_asc':
+                        return new Date(a.date_posted) - new Date(b.date_posted);
+                    default:
+                        return b.match_score - a.match_score;
+                }
+            });
+            
+            currentPage = 1;
+            renderRecommendations();
+        }
+        
+        function renderRecommendations() {
+            recommendationsList.innerHTML = '';
+            
+            if (filteredRecommendations.length === 0) {
+                showNoRecommendations();
+                return;
+            }
+            
+            hideNoRecommendations();
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(filteredRecommendations.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredRecommendations.length);
+            const pageRecommendations = filteredRecommendations.slice(startIndex, endIndex);
+            
+            // Update showing count
+            showingCount.textContent = `Showing ${startIndex + 1}-${endIndex} of ${filteredRecommendations.length} recommendations`;
+            
+            // Render recommendations
+            pageRecommendations.forEach(job => {
+                const recommendationElement = template.content.cloneNode(true);
+                
+                recommendationElement.querySelector('.job-title').textContent = job.title;
+                recommendationElement.querySelector('.company-name').textContent = job.company;
+                recommendationElement.querySelector('.job-location').textContent = job.location;
+                recommendationElement.querySelector('.job-description').textContent = job.description || 'No description available';
+                recommendationElement.querySelector('.match-score').textContent = `Match: ${Math.round(job.match_score * 100)}%`;
+                recommendationElement.querySelector('.job-date').textContent = formatDate(job.date_posted);
+                
+                const viewDetailsLink = recommendationElement.querySelector('.view-job-details');
+                viewDetailsLink.href = job.url;
+                viewDetailsLink.target = '_blank';
+                
+                const applyButton = recommendationElement.querySelector('.apply-btn');
+                applyButton.addEventListener('click', () => initiateApplication(job.id));
+                
+                recommendationsList.appendChild(recommendationElement);
+            });
+            
+            renderPagination(totalPages);
+            hideLoader();
+        }
+        
+        function renderPagination(totalPages) {
+            paginationContainer.innerHTML = '';
+            
+            if (totalPages <= 1) {
+                return;
+            }
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.textContent = 'Previous';
+            prevLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderRecommendations();
+                }
+            });
+            prevLi.appendChild(prevLink);
+            paginationContainer.appendChild(prevLi);
+            
+            // Page numbers
+            const maxPagesToShow = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+            
+            if (endPage - startPage + 1 < maxPagesToShow) {
+                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = i;
+                pageLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage = i;
+                    renderRecommendations();
+                });
+                pageLi.appendChild(pageLink);
+                paginationContainer.appendChild(pageLi);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.textContent = 'Next';
+            nextLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderRecommendations();
+                }
+            });
+            nextLi.appendChild(nextLink);
+            paginationContainer.appendChild(nextLi);
+        }
+        
+        function populateFilters() {
+            // Clear existing options except the first one
+            while (locationFilter.options.length > 1) {
+                locationFilter.remove(1);
+            }
+            while (companyFilter.options.length > 1) {
+                companyFilter.remove(1);
+            }
+            
+            // Get unique locations and companies
+            const locations = new Set();
+            const companies = new Set();
+            
+            allRecommendations.forEach(job => {
+                if (job.location) locations.add(job.location);
+                if (job.company) companies.add(job.company);
+            });
+            
+            // Add options to filters
+            [...locations].sort().forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                locationFilter.appendChild(option);
+            });
+            
+            [...companies].sort().forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                companyFilter.appendChild(option);
+            });
+        }
+        
+        function initiateApplication(jobId) {
+            // Redirect to application page or open application modal
+            window.location.href = `/applications/apply?job_id=${jobId}`;
+        }
+        
+        function showLoader() {
+            recommendationsLoader.classList.remove('d-none');
+            recommendationsList.classList.add('d-none');
+            noRecommendations.classList.add('d-none');
+        }
+        
+        function hideLoader() {
+            recommendationsLoader.classList.add('d-none');
+            recommendationsList.classList.remove('d-none');
+        }
+        
+        function showNoRecommendations() {
+            noRecommendations.classList.remove('d-none');
+            recommendationsList.classList.add('d-none');
+        }
+        
+        function hideNoRecommendations() {
+            noRecommendations.classList.add('d-none');
+            recommendationsList.classList.remove('d-none');
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'No date';
+            
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Invalid date';
+            
+            // Calculate relative time
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            
+            // Format as MM/DD/YYYY for older dates
+            return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+        }
+    });
+</script>
+{% endblock %}
