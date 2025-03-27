@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - InstantApply</title>
+    <title>Login - InstantApply</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 </head>
 <body>
-    <header>
-        <h1>InstantApply</h1>
-        <p>Automated Job Application Assistant</p>
+    <header class="top-header">
+        <div class="brand">InstantApply</div>
         <nav>
-            <a href="/">Home</a> | 
-            <a href="/login">Login</a> |
-            <a href="/signup">Sign Up</a>
+            <ul class="nav-left" style="margin-left: 1.5rem;">
+                <li><a href="/profile">Login</a></li>
+            </ul>
         </nav>
     </header>
     
