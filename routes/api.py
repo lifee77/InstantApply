@@ -230,6 +230,81 @@ def search_and_recommend():
         current_app.logger.error(f"Error in search-and-recommendations: {str(e)}")
         return jsonify({'error': 'Failed to search and save recommendations'}), 500
 
+@api_bp.route('/apply', methods=['GET'])
+@login_required
+def test_apply():
+    """
+    Test endpoint for the application filler functionality.
+    Access this via browser to test with a sample job application URL.
+    """
+    # Sample job URL for testing - you can modify this or pass as a query parameter
+    job_url = request.args.get('job_url', 'https://www.indeed.com/viewjob?jk=sample_job_id')
+    
+    # Initialize the ApplicationFiller
+    from utils.application_filler import ApplicationFiller
+    app_filler = ApplicationFiller(current_user, job_url=job_url)
+    
+    # Create an async function to run the application filler
+    async def test_fill_application():
+        result = await app_filler.fill_application()
+        return result
+    
+    try:
+        # Run the async function
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(test_fill_application())
+        loop.close()
+        
+        # Return a simple HTML result for browser viewing
+        html_result = f"""
+        <html>
+        <head>
+            <title>ApplicationFiller Test Result</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                h1 {{ color: #333; }}
+                .success {{ color: green; }}
+                .error {{ color: red; }}
+                pre {{ background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+            </style>
+        </head>
+        <body>
+            <h1>ApplicationFiller Test Results</h1>
+            <p><strong>URL:</strong> {job_url}</p>
+            <p><strong>Status:</strong> <span class="{'success' if result['success'] else 'error'}">
+                {'SUCCESS' if result['success'] else 'FAILED'}
+            </span></p>
+            <p><strong>Message:</strong> {result['message']}</p>
+            <h2>Complete Response:</h2>
+            <pre>{json.dumps(result, indent=2)}</pre>
+        </body>
+        </html>
+        """
+        return html_result
+    except Exception as e:
+        error_message = f"ApplicationFiller test failed: {str(e)}"
+        current_app.logger.error(error_message)
+        return f"""
+        <html>
+        <head>
+            <title>ApplicationFiller Test Error</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                h1 {{ color: #333; }}
+                .error {{ color: red; }}
+                pre {{ background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+            </style>
+        </head>
+        <body>
+            <h1>ApplicationFiller Test Error</h1>
+            <p class="error">{error_message}</p>
+            <h2>Stack Trace:</h2>
+            <pre>{str(e)}</pre>
+        </body>
+        </html>
+        """
+
 @api_bp.route('/apply', methods=['POST'])
 @login_required
 def apply():
