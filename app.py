@@ -82,21 +82,78 @@ def create_app():
             # Get application count
             application_count = Application.query.filter_by(user_id=current_user.id).count()
             
-            # Calculate profile completion
-            profile_completion = 0
-            total_fields = 0
+            # Calculate profile completion with a more comprehensive approach
+            # Define field groups with weights
+            field_groups = {
+                'basic_info': {
+                    'weight': 20,
+                    'fields': [
+                        ('name', current_user.name),
+                        ('email', current_user.email),
+                        ('professional_summary', current_user.professional_summary),
+                        ('linkedin_url', current_user.linkedin_url)
+                    ]
+                },
+                'skills_experience': {
+                    'weight': 30,
+                    'fields': [
+                        ('skills', current_user.skills),
+                        ('experience', current_user.experience),
+                        ('projects', current_user._projects)
+                    ]
+                },
+                'resume': {
+                    'weight': 15,
+                    'fields': [
+                        ('resume_file', current_user.resume_file_path)
+                    ]
+                },
+                'work_preferences': {
+                    'weight': 10,
+                    'fields': [
+                        ('desired_salary_range', current_user.desired_salary_range),
+                        ('work_mode_preference', current_user.work_mode_preference),
+                        ('available_start_date', current_user.available_start_date)
+                    ]
+                },
+                'additional_qualifications': {
+                    'weight': 15,
+                    'fields': [
+                        ('certifications', current_user._certifications),
+                        ('languages', current_user._languages)
+                    ]
+                },
+                'professional_details': {
+                    'weight': 10,
+                    'fields': [
+                        ('career_goals', current_user.career_goals),
+                        ('work_style', current_user.work_style),
+                        ('applicant_values', current_user._applicant_values)
+                    ]
+                }
+            }
             
-            # Check for presence of key user profile fields
-            if current_user.name: profile_completion += 1; total_fields += 1
-            if current_user.email: profile_completion += 1; total_fields += 1
-            if current_user.professional_summary: profile_completion += 1; total_fields += 1
-            if current_user.skills: profile_completion += 1; total_fields += 1
-            if current_user.experience: profile_completion += 1; total_fields += 1
-            if current_user._projects: profile_completion += 1; total_fields += 1  # Using the database column name
-            if current_user.resume_file_path: profile_completion += 1; total_fields += 1
-            if current_user.linkedin_url: profile_completion += 1; total_fields += 1
+            # Calculate completion for each group
+            group_completions = {}
+            overall_completion = 0
             
-            profile_completion = int((profile_completion / max(total_fields, 1)) * 100)
+            for group, data in field_groups.items():
+                weight = data['weight']
+                fields = data['fields']
+                
+                # Calculate how many fields in this group are completed
+                completed = sum(1 for _, value in fields if value)
+                total = len(fields)
+                
+                # Calculate group completion percentage
+                group_pct = int((completed / max(total, 1)) * 100)
+                group_completions[group] = group_pct
+                
+                # Add weighted contribution to overall completion
+                overall_completion += (group_pct * weight / 100)
+            
+            # Round to nearest integer
+            profile_completion = int(overall_completion)
             
             # Get recent applications
             recent_applications = Application.query.filter_by(
@@ -106,7 +163,8 @@ def create_app():
             return render_template('dashboard.html',
                                   application_count=application_count,
                                   profile_completion=profile_completion,
-                                  recent_applications=recent_applications)
+                                  recent_applications=recent_applications,
+                                  group_completions=group_completions)  # Pass group data for detailed display
         return render_template('index.html')
 
     @app.route('/api/search', methods=['POST'])

@@ -70,9 +70,36 @@
             <div class="stat-card">
                 <h4>Profile Completion</h4>
                 <div class="progress-bar">
-                    <div class="progress" style="width: {{ profile_completion if profile_completion is defined else 0 }}%"></div>
+                    <div class="progress" style="width: {{ profile_completion if profile_completion is defined else 0 }}%; 
+                        background-color: {% if profile_completion < 33 %}#e74c3c{% elif profile_completion < 66 %}#f39c12{% else %}#2ecc71{% endif %};">
+                    </div>
                 </div>
                 <p>{{ profile_completion if profile_completion is defined else 0 }}% Complete</p>
+                {% if group_completions is defined %}
+                <div class="completion-details" style="margin-top: 10px; font-size: 0.8em;">
+                    <p style="margin-bottom: 5px; font-weight: bold;">Complete your profile:</p>
+                    <ul style="list-style: none; padding-left: 0; margin-top: 5px;">
+                        {% set categories = {
+                            'basic_info': 'Basic Info',
+                            'skills_experience': 'Skills & Experience', 
+                            'resume': 'Resume',
+                            'work_preferences': 'Work Preferences',
+                            'additional_qualifications': 'Additional Qualifications',
+                            'professional_details': 'Professional Details'
+                        } %}
+                        
+                        {% for group, completion in group_completions.items() %}
+                            {% if completion < 100 %}
+                                <li style="margin-bottom: 3px;">
+                                    <span style="color: {% if completion < 33 %}#e74c3c{% elif completion < 66 %}#f39c12{% else %}#2ecc71{% endif %}; display: inline-block;">
+                                        {{ categories[group] }}: {{ completion }}%
+                                    </span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
                 <a href="/profile" class="update-profile">Update Profile</a>
             </div>
         </section>
@@ -105,3 +132,5 @@
     
     <!-- Load dashboard JavaScript -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
