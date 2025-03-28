@@ -210,51 +210,89 @@ class ApplicationFiller:
             A list of extracted questions
         """
         questions = []
+        
+        # Take a screenshot before parsing starts
+        await save_full_page_screenshot(page, "before_parsing_page")
+        
         try:
-            # First try to find form labels
-            label_elements = await page.query_selector_all("form label")
+            # Look for form fields directly rather than just labels
+            # This includes inputs, textareas, selects and their associated labels
+            logger.info("Searching for form input fields...")
             
-            if not label_elements:
-                # Try alternative selectors if no labels are found
-                label_elements = await page.query_selector_all("form .field-label, form .question-text, form .form-label")
+            # First, look for all input fields, textareas and select dropdowns
+            form_fields = await page.query_selector_all('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), textarea, select')
             
-            for label_element in label_elements:
-                question_text = await label_element.inner_text()
-                question_text = question_text.strip()
-
-                # Exclude standard fields (e.g., name, email, phone)
-                if question_text.lower() in ["name", "email", "phone", "resume", "linkedin"]:
-                    continue
-                
-                # Find associated input type to determine question type
-                question_type = "text"  # Default question type
-                
-                # Try to find associated input by checking if the label has a "for" attribute
-                for_attr = await label_element.get_attribute("for")
-                if for_attr:
-                    # Check if this input exists and what type it is
-                    input_elem = await page.query_selector(f"#{for_attr}")
-                    if input_elem:
-                        input_type = await input_elem.get_attribute("type")
-                        if input_type:
-                            question_type = input_type
-                
-                logger.debug(f"Detected question: '{question_text}' with type '{question_type}'")
-                questions.append({
-                    "text": question_text,
-                    "type": question_type,
-                    "element_id": for_attr
-                })
+            logger.info(f"Found {len(form_fields)} potential form fields")
+            
+            for field in form_fields:
+                try:
+                    field_type = await field.get_attribute('type') or 'text'
+                    field_name = await field.get_attribute('name') or ''
+                    field_id = await field.get_attribute('id') or ''
+                    field_placeholder = await field.get_attribute('placeholder') or ''
+                    
+                    # Skip login/email/password/name/file fields - these are handled separately
+                    if any(keyword in field_name.lower() or keyword in field_type.lower() or keyword in field_id.lower() 
+                           for keyword in ['email', 'name', 'first', 'last', 'phone', 'resume', 'file', 'password', 'login', 'submit', 'button']):
+                        logger.debug(f"Skipping field: {field_name or field_id} (standard field)")
+                        continue
+                    
+                    # Try to find associated label
+                    question_text = ""
+                    
+                    # First check if we can find a label with a 'for' attribute matching this field's ID
+                    if field_id:
+                        label = await page.query_selector(f'label[for="{field_id}"]')
+                        if label:
+                            question_text = await label.inner_text()
+                    
+                    # If no label was found, try looking for enclosing labels or nearby text
+                    if not question_text and field_name:
+                        # Try to find text elements near this field
+                        label_candidates = await page.query_selector_all(f'label, div, p, span')
+                        for candidate in label_candidates:
+                            candidate_text = await candidate.inner_text()
+                            if field_name.lower() in candidate_text.lower() or field_name.replace('_', ' ').lower() in candidate_text.lower():
+                                question_text = candidate_text
+                                break
+                    
+                    # Use placeholder text if no label was found
+                    if not question_text and field_placeholder:
+                        question_text = field_placeholder
+                        
+                    # Use field name as fallback if still no question text
+                    if not question_text:
+                        question_text = field_name.replace('_', ' ').capitalize()
+                    
+                    # Clean up the question text
+                    question_text = question_text.strip()
+                    if question_text.endswith(':'):
+                        question_text = question_text[:-1]
+                        
+                    if question_text:
+                        logger.info(f"Found form field: '{question_text}' (Type: {field_type}, ID: {field_id or 'none'}, Name: {field_name or 'none'})")
+                        questions.append({
+                            "text": question_text,
+                            "type": field_type,
+                            "element_id": field_id,
+                            "name": field_name,
+                            "field": field
+                        })
+                except Exception as field_error:
+                    logger.error(f"Error processing field: {str(field_error)}")
         except Exception as e:
             logger.error(f"Error parsing application page: {str(e)}")
             
-        if not questions:
-            # Return default questions if none were found
-            logger.warning("No questions found, using default questions")
+        # Only use default questions if we're testing with a dummy URL
+        if not questions and ('sample_job_id' in self.job_url or 'example.com' in self.job_url):
+            logger.warning("No questions found and using test URL, using default questions")
             questions = [
                 {"text": "What is your greatest strength?", "type": "text"},
                 {"text": "Why do you want to work here?", "type": "text"},
             ]
+        elif not questions:
+            # For real applications, just log that no fields were found
+            logger.warning("No fillable form fields were detected on this page")
             
         return questions
 
@@ -281,6 +319,14 @@ class ApplicationFiller:
             if element_id:
                 selector = f"#{element_id}"
                 logger.info(f"Using ID selector: {selector}")
+                
+                # Direct fill approach for ID-based elements
+                try:
+                    await page.fill(selector, user_response)
+                    logger.info(f"Filled field with ID '{element_id}' using direct fill")
+                    return True
+                except Exception as e:
+                    logger.warning(f"Direct fill failed, trying alternative methods: {str(e)}")
             else:
                 # Try multiple selector strategies - improved for better detection
                 selectors = [
@@ -293,25 +339,35 @@ class ApplicationFiller:
                 
                 # Try each selector until one works
                 found_element = None
+                working_selector = None
+                
                 for selector in selectors:
                     logger.info(f"Trying selector: {selector}")
                     try:
-                        found_element = await page.wait_for_selector(selector, timeout=5000)
+                        found_element = await page.query_selector(selector)
                         if found_element:
                             logger.info(f"Found element with selector: {selector}")
+                            working_selector = selector
                             break
                     except Exception as e:
-                        logger.debug(f"Selector {selector} failed with: {str(e)}")
+                        logger.debug(f"Selector {selector} failed: {str(e)}")
                 
-                if found_element:
-                    selector = selectors[[i for i, s in enumerate(selectors) if await page.query_selector(s)][0]]
+                if found_element and working_selector:
+                    # Try direct fill first
+                    try:
+                        await found_element.fill(user_response)
+                        logger.info(f"Filled using element.fill() method")
+                        return True
+                    except Exception as e:
+                        logger.warning(f"Element.fill() failed: {str(e)}, trying JavaScript")
+                        selector = working_selector
                 else:
                     # If all selectors fail, try a more generic approach
                     logger.warning(f"No element found for question '{question_text}'. Using fallback approach.")
                     try:
                         # Just find any input or textarea
                         selector = 'input[type="text"], textarea'
-                        found_element = await page.wait_for_selector(selector, timeout=5000)
+                        found_element = await page.query_selector(selector)
                         if not found_element:
                             raise Exception("No input elements found")
                     except Exception as e:
@@ -323,20 +379,20 @@ class ApplicationFiller:
                 logger.warning(f"No response available for question '{question_text}'.")
                 return False
             
-            # Use evaluate_handle for more reliable filling
-            await page.evaluate(f'''
-                (selector, value) => {{
-                    const elements = document.querySelectorAll(selector);
-                    if (elements.length > 0) {{
+            # Use JavaScript evaluation with correct syntax (only 2 arguments: js_code and selector+value object)
+            await page.evaluate("""
+                (args) => {
+                    const elements = document.querySelectorAll(args.selector);
+                    if (elements.length > 0) {
                         const element = elements[0];
-                        element.value = value;
-                        element.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                        element.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        element.value = args.value;
+                        element.dispatchEvent(new Event('input', { bubbles: true }));
+                        element.dispatchEvent(new Event('change', { bubbles: true }));
                         return true;
-                    }}
+                    }
                     return false;
-                }}
-            ''', selector, user_response)
+                }
+            """, {"selector": selector, "value": user_response})
             
             logger.info(f"Filled field for '{question_text}' with response starting: {user_response[:30]}...")
             
@@ -558,27 +614,91 @@ class ApplicationFiller:
                 except Exception as e:
                     logger.warning(f"Page loading timed out, continuing anyway: {str(e)}")
                 
-                # Debugging: Take screenshot after loading page
-                await page.screenshot(path=f"/tmp/application_initial_{int(time.time())}.png")
+                # Take full page screenshot and save HTML for analysis
+                await save_full_page_screenshot(page, "initial_page")
                 
                 # Add manual delay to ensure page is fully loaded
                 await asyncio.sleep(5)
                 
-                # Fill the application form
+                # Check if we need to click an "Apply" button or similar first
+                apply_button_found = await self._check_and_click_apply_button(page)
+                if apply_button_found:
+                    # Wait for navigation after clicking apply button
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=15000)
+                        # Save screenshot of the application form page
+                        await save_full_page_screenshot(page, "after_apply_button")
+                    except Exception as e:
+                        logger.warning(f"Page loading after apply button timed out: {str(e)}")
+                
+                # Look for common application form patterns and handle them
+                form_found = await self._detect_and_handle_form_type(page)
+                if not form_found:
+                    result["message"] = "Could not detect application form on the page"
+                    logger.warning(result["message"])
+                    
+                    # Save final screenshot
+                    await save_full_page_screenshot(page, "final_state")
+                    
+                    # Keep browser open longer if debug mode is enabled
+                    if os.environ.get('DEBUG_MODE') == '1':
+                        logger.info("DEBUG_MODE enabled - keeping browser open for 60 seconds")
+                        await asyncio.sleep(60)
+                    return result
+                
+                # Step 1: Upload resume FIRST before filling the form
+                # This should trigger auto-population of fields in many application systems
+                resume_uploaded = await self.prioritize_resume_upload(page)
+                result["resume_uploaded"] = resume_uploaded
+                
+                if resume_uploaded:
+                    # Wait for potential auto-fill to happen
+                    logger.info("Resume uploaded successfully, waiting for potential autofill...")
+                    await asyncio.sleep(5)
+                    await save_full_page_screenshot(page, "after_resume_upload_autofill")
+                
+                # Step 2: Fill in the basic identifier fields (name, email, etc.)
+                # Look for common basic fields that may be required
+                basic_fields = [
+                    {'selector': 'input[name*="name"], input[placeholder*="name"]', 'value': self.user.name},
+                    {'selector': 'input[type="email"], input[name*="email"], input[placeholder*="email"]', 'value': self.user.email},
+                    {'selector': 'input[name*="phone"], input[placeholder*="phone"], input[type="tel"]', 'value': self.user.phone if hasattr(self.user, 'phone') else ''},
+                ]
+                
+                for field in basic_fields:
+                    if field['value']:  # Only try to fill if we have a value
+                        try:
+                            elements = await page.query_selector_all(field['selector'])
+                            for elem in elements:
+                                is_visible = await elem.is_visible()
+                                if is_visible:
+                                    await elem.fill(field['value'])
+                                    logger.info(f"Filled basic field: {field['selector']} with value: {field['value']}")
+                                    break
+                        except Exception as e:
+                            logger.debug(f"Error filling basic field {field['selector']}: {str(e)}")
+                
+                # Wait a bit after filling basic fields
+                await asyncio.sleep(2)
+                
+                # Step 3: Now fill the rest of the form
                 form_result = await self.fill_application_form(page)
                 result["form_completed"] = form_result["success"]
                 result["failed_fields"] = form_result["failed_fields"]
                 
-                # Upload resume
-                result["resume_uploaded"] = await self.handle_resume_upload(page)
+                # Check if there's a submit button and click it
+                submit_clicked = await self._find_and_click_submit_button(page)
+                if submit_clicked:
+                    logger.info("Submit button clicked successfully")
+                    
+                    # Wait a bit for submission to complete
+                    await asyncio.sleep(5)
+                    
+                    # Save screenshot of confirmation page
+                    await save_full_page_screenshot(page, "confirmation_page")
                 
                 # Set overall success based on form completion and resume upload
                 result["success"] = result["form_completed"]
-                
-                # Take screenshot for debugging
-                screenshot_path = f"/tmp/application_{int(time.time())}.png"
-                await page.screenshot(path=screenshot_path)
-                logger.info(f"Screenshot saved to {screenshot_path}")
                 
                 # Keep browser open for manual inspection if requested (dev mode)
                 if os.environ.get('DEBUG_MODE') == '1':
@@ -588,6 +708,8 @@ class ApplicationFiller:
                 # Set final message
                 if result["success"]:
                     result["message"] = "Application form filled successfully."
+                    if submit_clicked:
+                        result["message"] += " Submit button was clicked."
                     logger.info("Application process completed successfully")
                 else:
                     result["message"] = f"Application partially completed with {len(form_result['failed_fields'])} failed fields."
@@ -603,3 +725,366 @@ class ApplicationFiller:
             logger.error(error_message)
             
         return result
+
+    async def _check_and_click_apply_button(self, page):
+        """
+        Look for and click an "Apply" button if one exists.
+        
+        Returns:
+            bool: True if an apply button was found and clicked
+        """
+        # Common selectors for apply buttons
+        apply_button_selectors = [
+            'button:has-text("Apply")', 
+            'button:has-text("Apply Now")',
+            'a:has-text("Apply")',
+            'a:has-text("Apply Now")',
+            'a.apply-button',
+            'button.apply-button',
+            '[data-automation="apply-button"]',
+            '[aria-label*="apply"]'
+        ]
+        
+        for selector in apply_button_selectors:
+            try:
+                logger.info(f"Looking for apply button with selector: {selector}")
+                button = await page.query_selector(selector)
+                if button:
+                    # Check if button is visible
+                    is_visible = await button.is_visible()
+                    if is_visible:
+                        logger.info(f"Found apply button with selector: {selector}")
+                        await button.click()
+                        logger.info("Clicked apply button")
+                        return True
+            except Exception as e:
+                logger.debug(f"Error checking apply button selector '{selector}': {str(e)}")
+        
+        logger.info("No apply button found or could not be clicked")
+        return False
+    
+    async def _detect_and_handle_form_type(self, page):
+        """
+        Detect what type of application form we're dealing with and handle it appropriately.
+        
+        Returns:
+            bool: True if a form was detected and handled
+        """
+        # Take a screenshot before detection
+        await save_full_page_screenshot(page, "before_form_detection")
+        
+        # Check for different types of application forms
+        form_types = [
+            self._check_for_standard_form,
+            self._check_for_greenhouse_form,
+            self._check_for_lever_form,
+            self._check_for_workday_form,
+            self._check_for_ashby_form,
+            self._check_for_indeed_form,
+            self._check_for_linkedin_form
+        ]
+        
+        for check_function in form_types:
+            try:
+                logger.info(f"Trying form detection with {check_function.__name__}")
+                form_detected = await check_function(page)
+                if form_detected:
+                    logger.info(f"Form detected with {check_function.__name__}")
+                    return True
+            except Exception as e:
+                logger.error(f"Error in {check_function.__name__}: {str(e)}")
+        
+        logger.warning("No form type detected")
+        return False
+    
+    async def _check_for_standard_form(self, page):
+        """Check for a standard HTML form"""
+        form = await page.query_selector('form')
+        if (form):
+            logger.info("Standard form detected")
+            return True
+        return False
+    
+    async def _check_for_greenhouse_form(self, page):
+        """Check for Greenhouse ATS form"""
+        if 'greenhouse' in await page.content():
+            logger.info("Greenhouse form detected")
+            # Handle Greenhouse specific logic here
+            return True
+        return False
+    
+    async def _check_for_lever_form(self, page):
+        """Check for Lever ATS form"""
+        if 'lever' in await page.content():
+            logger.info("Lever form detected")
+            # Handle Lever specific logic here
+            return True
+        return False
+    
+    async def _check_for_workday_form(self, page):
+        """Check for Workday ATS form"""
+        if 'workday' in await page.content():
+            logger.info("Workday form detected")
+            # Handle Workday specific logic here
+            return True
+        return False
+
+    async def _check_for_ashby_form(self, page):
+        """Check for Ashby ATS form"""
+        if 'ashbyhq' in self.job_url or 'ashby' in await page.content():
+            logger.info("Ashby form detected")
+            
+            # Look for and click the first step in the application
+            try:
+                # Check if there's a "start application" or similar button
+                start_buttons = [
+                    'button:has-text("Start")',
+                    'button:has-text("Begin")',
+                    'button:has-text("Start Application")',
+                    'a:has-text("Start Application")'
+                ]
+                
+                for selector in start_buttons:
+                    button = await page.query_selector(selector)
+                    if button and await button.is_visible():
+                        await button.click()
+                        logger.info(f"Clicked start button with selector: {selector}")
+                        await asyncio.sleep(2)
+                        await save_full_page_screenshot(page, "after_ashby_start_button")
+                        break
+                
+                # Look for name input fields - Ashby typically has these at the beginning
+                name_fields = await page.query_selector_all('input[name*="name"], input[placeholder*="name"]')
+                if name_fields:
+                    for field in name_fields:
+                        field_name = await field.get_attribute('name') or await field.get_attribute('placeholder') or "unknown"
+                        if "first" in field_name.lower():
+                            await field.fill(self.user.name.split()[0])
+                        elif "last" in field_name.lower():
+                            if len(self.user.name.split()) > 1:
+                                await field.fill(self.user.name.split()[1])
+                        else:
+                            await field.fill(self.user.name)
+                
+                # Look for email input
+                email_field = await page.query_selector('input[type="email"], input[name*="email"], input[placeholder*="email"]')
+                if email_field:
+                    await email_field.fill(self.user.email)
+                
+                # Look for "Next" button to proceed to questions
+                next_buttons = [
+                    'button:has-text("Next")',
+                    'button:has-text("Continue")',
+                    'button[type="submit"]',
+                    'button.next-button'
+                ]
+                
+                for selector in next_buttons:
+                    button = await page.query_selector(selector)
+                    if button and await button.is_visible():
+                        await button.click()
+                        logger.info(f"Clicked next button with selector: {selector}")
+                        await asyncio.sleep(3)
+                        await save_full_page_screenshot(page, "after_ashby_next_button")
+                        break
+            except Exception as e:
+                logger.error(f"Error handling Ashby form: {str(e)}")
+            
+            return True
+        return False
+    
+    async def _check_for_indeed_form(self, page):
+        """Check for Indeed application form"""
+        if 'indeed' in self.job_url or 'indeed' in await page.content():
+            logger.info("Indeed form detected")
+            
+            # Handle Indeed specific logic here
+            try:
+                # Look for "Apply now" button
+                apply_buttons = await page.query_selector_all('button:has-text("Apply now"), a:has-text("Apply now")')
+                if apply_buttons:
+                    await apply_buttons[0].click()
+                    logger.info("Clicked 'Apply now' button on Indeed")
+                    await asyncio.sleep(2)
+            except Exception as e:
+                logger.error(f"Error with Indeed apply button: {str(e)}")
+                
+            return True
+        return False
+    
+    async def _check_for_linkedin_form(self, page):
+        """Check for LinkedIn EasyApply form"""
+        if 'linkedin.com/jobs' in self.job_url:
+            logger.info("LinkedIn job page detected")
+            
+            try:
+                # Look for "Easy Apply" button
+                easy_apply_buttons = [
+                    'button:has-text("Easy Apply")',
+                    'button:has-text("Apply")',
+                    'button.jobs-apply-button'
+                ]
+                
+                for selector in easy_apply_buttons:
+                    button = await page.query_selector(selector)
+                    if button and await button.is_visible():
+                        await button.click()
+                        logger.info(f"Clicked LinkedIn apply button with selector: {selector}")
+                        await asyncio.sleep(3)
+                        await save_full_page_screenshot(page, "after_linkedin_apply_button")
+                        
+                        # LinkedIn often has a multi-step application form
+                        # Look for next button to navigate through steps
+                        next_buttons = [
+                            'button:has-text("Next")',
+                            'button:has-text("Continue")',
+                            'button[aria-label="Continue to next step"]'
+                        ]
+                        
+                        for next_selector in next_buttons:
+                            next_button = await page.query_selector(next_selector)
+                            if next_button and await next_button.is_visible():
+                                await next_button.click()
+                                logger.info("Clicked LinkedIn next button")
+                                await asyncio.sleep(2)
+                                await save_full_page_screenshot(page, "linkedin_next_step")
+                                break
+                        
+                        return True
+            except Exception as e:
+                logger.error(f"Error with LinkedIn apply button: {str(e)}")
+                
+            return True
+        return False
+    
+    async def _find_and_click_submit_button(self, page):
+        """
+        Find and click the submit button to complete the application.
+        
+        Returns:
+            bool: True if submit button was found and clicked
+        """
+        # Common submit button selectors
+        submit_selectors = [
+            'button[type="submit"]',
+            'button:has-text("Submit")',
+            'button:has-text("Submit Application")',
+            'button:has-text("Apply")',
+            'input[type="submit"]',
+            'button.submit-button',
+            'button:has-text("Send Application")',
+            'button:has-text("Complete Application")'
+        ]
+        
+        # Take a screenshot before looking for submit button
+        await save_full_page_screenshot(page, "before_submit_button")
+        
+        for selector in submit_selectors:
+            try:
+                logger.info(f"Looking for submit button with selector: {selector}")
+                submit_button = await page.query_selector(selector)
+                if submit_button:
+                    is_visible = await submit_button.is_visible()
+                    if is_visible:
+                        logger.info(f"Found submit button with selector: {selector}")
+                        await submit_button.click()
+                        logger.info("Clicked submit button")
+                        return True
+            except Exception as e:
+                logger.debug(f"Error checking submit button selector '{selector}': {str(e)}")
+                
+        logger.warning("No submit button found or could not be clicked")
+        return False
+
+    async def prioritize_resume_upload(self, page):
+        """
+        Upload resume first, before filling any other fields.
+        This is important because some forms auto-populate fields from the resume.
+        
+        Args:
+            page: The Playwright page object
+            
+        Returns:
+            bool: True if resume was uploaded
+        """
+        logger.info("Looking for resume upload field first")
+        
+        # First take a screenshot to see the current page
+        await save_full_page_screenshot(page, "before_resume_upload")
+        
+        # Common selectors for resume upload fields
+        resume_selectors = [
+            'input[type="file"][accept*="pdf"]',
+            'input[type="file"][accept*="doc"]',
+            'input[type="file"]',
+            'label:has-text("Resume") input[type="file"]',
+            'label:has-text("Upload") input[type="file"]',
+            'label:has-text("CV") input[type="file"]',
+            'div:has-text("Upload resume") input[type="file"]',
+            'div:has-text("Upload your resume") input[type="file"]',
+            'div[aria-label*="resume"] input[type="file"]'
+        ]
+        
+        if self.user.resume_file_path and os.path.exists(self.user.resume_file_path):
+            for selector in resume_selectors:
+                try:
+                    logger.info(f"Looking for resume upload with selector: {selector}")
+                    file_input = await page.wait_for_selector(selector, timeout=3000)
+                    if file_input:
+                        logger.info(f"Found resume upload field with selector: {selector}")
+                        await file_input.set_input_files(self.user.resume_file_path)
+                        logger.info(f"Resume uploaded from: {self.user.resume_file_path}")
+                        
+                        # Wait for autofill to potentially occur
+                        await asyncio.sleep(5)
+                        
+                        # Check if there's a "parse resume" or similar button that needs to be clicked
+                        parse_buttons = [
+                            'button:has-text("Parse")',
+                            'button:has-text("Extract")',
+                            'button:has-text("Autofill")',
+                            'a:has-text("Autofill")',
+                            'button.parse-resume'
+                        ]
+                        
+                        for btn_selector in parse_buttons:
+                            parse_button = await page.query_selector(btn_selector)
+                            if parse_button and await parse_button.is_visible():
+                                await parse_button.click()
+                                logger.info(f"Clicked parse button: {btn_selector}")
+                                await asyncio.sleep(3)  # Wait for parsing to complete
+                                break
+                        
+                        # Take screenshot after upload
+                        await save_full_page_screenshot(page, "after_resume_upload")
+                        return True
+                except Exception as e:
+                    logger.debug(f"Error with resume selector {selector}: {str(e)}")
+            
+            logger.warning("Could not find resume upload field")
+            return False
+        else:
+            logger.warning("No resume file path found or file does not exist")
+            return False
+
+async def save_full_page_screenshot(page, name_prefix="full_page"):
+    """Take a full page screenshot with useful debug information."""
+    try:
+        # Create a more detailed filename with timestamp
+        filename = f"/tmp/{name_prefix}_{int(time.time())}.png"
+        
+        # Take a full page screenshot
+        await page.screenshot(path=filename, full_page=True)
+        
+        # Also capture page HTML for analysis
+        html_filename = f"/tmp/{name_prefix}_html_{int(time.time())}.html"
+        html_content = await page.content()
+        with open(html_filename, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"Full page screenshot saved to {filename}")
+        logger.info(f"HTML content saved to {html_filename}")
+        return filename
+    except Exception as e:
+        logger.error(f"Failed to take full page screenshot: {str(e)}")
+        return None
