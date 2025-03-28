@@ -34,7 +34,7 @@
         <nav>
             <ul class="nav-left" style="margin-left: 1.5rem;">
                 <li><a href="/profile">Profile</a></li>
-                <li><a href="/applications">My Applications</a></li>
+                <li><a href="/api/apply-page">My Applications</a></li>
             </ul>
             <ul class="nav-right">
                 <li><a href="/logout">Log Out</a></li>
@@ -65,7 +65,7 @@
             <div class="stat-card">
                 <h4>Applications</h4>
                 <p class="stat-number">{{ application_count if application_count is defined else 0 }}</p>
-                <a href="/applications" class="view-all">View All</a>
+                <a href="/api/apply-page" class="view-all">View All</a>
             </div>
             <div class="stat-card">
                 <h4>Profile Completion</h4>
@@ -116,7 +116,7 @@
                     </div>
                     {% endfor %}
                 </div>
-                <a href="/applications" class="view-all">View All Applications</a>
+                <a href="/api/apply-page" class="view-all">View All Applications</a>
             {% else %}
                 <div class="empty-state">
                     <p>You haven't submitted any applications yet.</p>

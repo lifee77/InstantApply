@@ -13,8 +13,9 @@
         <nav>
             <a href="/">Home</a> | 
             {% if current_user.is_authenticated %}
+                <a href="/">Home</a>
                 <a href="/profile">Profile</a> |
-                <a href="/applications">My Applications</a> |
+                <a href="/api/apply-page">My Applications</a> |
                 <a href="/logout">Logout</a>
             {% else %}
                 <a href="/login">Login</a> |
@@ -37,7 +38,7 @@
         {% if current_user.is_authenticated %}
             <div class="welcome-message">
                 <h2>Welcome, {{ current_user.name }}!</h2>
-                <p>Start searching for jobs below or check your <a href="/applications">application status</a>.</p>
+                <p>Start searching for jobs below or check your <a href="/api/apply-page">application status</a>.</p>
             </div>
         {% else %}
             <div class="welcome-message">
