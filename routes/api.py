@@ -237,8 +237,54 @@ def test_apply():
     Test endpoint for the application filler functionality.
     Access this via browser to test with a sample job application URL.
     """
-    # Sample job URL for testing - you can modify this or pass as a query parameter
-    job_url = request.args.get('job_url', 'https://www.indeed.com/viewjob?jk=sample_job_id')
+    # Get job URL from query parameter or use default test URL
+    job_url = request.args.get('job_url', 'https://www.linkedin.com/jobs/view/3824957351')
+    
+    # Show initial form if no URL provided in query string and not submitted via form
+    if 'job_url' not in request.args and request.method == 'GET' and 'submit' not in request.args:
+        return f"""
+        <html>
+        <head>
+            <title>ApplicationFiller Test</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }}
+                h1 {{ color: #333; }}
+                form {{ margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }}
+                input[type="text"] {{ width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }}
+                input[type="submit"] {{ padding: 10px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; }}
+                .examples {{ margin-top: 20px; }}
+                .example {{ padding: 5px 0; }}
+            </style>
+        </head>
+        <body>
+            <h1>Test ApplicationFiller</h1>
+            <p>Enter a job application URL to test the automatic application filling:</p>
+            
+            <form action="/api/apply" method="GET">
+                <input type="text" name="job_url" placeholder="Enter job URL" 
+                       value="https://www.linkedin.com/jobs/view/3824957351" style="width:80%">
+                <input type="hidden" name="submit" value="true">
+                <input type="submit" value="Test Application">
+            </form>
+            
+            <div class="examples">
+                <p><strong>Example URLs you can try:</strong></p>
+                <div class="example">
+                    <a href="/api/apply?job_url=https://www.linkedin.com/jobs/view/3824957351">
+                        LinkedIn Job - Software Engineer
+                    </a>
+                </div>
+                <div class="example">
+                    <a href="/api/apply?job_url=https://www.indeed.com/viewjob?jk=79c00d6d31fd4a93">
+                        Indeed Job - Web Developer
+                    </a>
+                </div>
+            </div>
+            
+            <p><em>Note: Set DEBUG_MODE=1 in environment to keep browser open longer for inspection.</em></p>
+        </body>
+        </html>
+        """
     
     # Initialize the ApplicationFiller
     from utils.application_filler import ApplicationFiller
@@ -262,11 +308,12 @@ def test_apply():
         <head>
             <title>ApplicationFiller Test Result</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                body {{ font-family: Arial, sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }}
                 h1 {{ color: #333; }}
                 .success {{ color: green; }}
                 .error {{ color: red; }}
                 pre {{ background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }}
             </style>
         </head>
         <body>
@@ -278,6 +325,8 @@ def test_apply():
             <p><strong>Message:</strong> {result['message']}</p>
             <h2>Complete Response:</h2>
             <pre>{json.dumps(result, indent=2)}</pre>
+            
+            <a href="/api/apply" class="back-button">Test Another URL</a>
         </body>
         </html>
         """
@@ -290,10 +339,11 @@ def test_apply():
         <head>
             <title>ApplicationFiller Test Error</title>
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                body {{ font-family: Arial, sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }}
                 h1 {{ color: #333; }}
                 .error {{ color: red; }}
                 pre {{ background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }}
             </style>
         </head>
         <body>
@@ -301,6 +351,8 @@ def test_apply():
             <p class="error">{error_message}</p>
             <h2>Stack Trace:</h2>
             <pre>{str(e)}</pre>
+            
+            <a href="/api/apply" class="back-button">Test Another URL</a>
         </body>
         </html>
         """
