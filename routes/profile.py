@@ -29,14 +29,14 @@ def profile():
         
         # Process standard form fields
         current_user.name = request.form.get('name', current_user.name)
-        current_user.professional_summary = request.form.get('professional_summary')
+        current_user.professional_summary = request.form.get('professional_summary', '')  # Allow empty value
         current_user.willing_to_relocate = 'willing_to_relocate' in request.form
-        current_user.authorization_status = request.form.get('authorization_status')
-        current_user.linkedin_url = request.form.get('linkedin_url')
+        current_user.authorization_status = request.form.get('authorization_status', '')  # Allow empty value
+        current_user.linkedin_url = request.form.get('linkedin_url', '')  # Allow empty value
         
         # Process JSON fields with proper error handling
         try:
-            # Process desired job titles
+            # Process desired job titles - handle empty case
             job_titles_json = request.form.get('desired_job_titles')
             if job_titles_json:
                 current_app.logger.debug(f"Raw job titles: {job_titles_json}")
@@ -55,41 +55,61 @@ def profile():
                 except Exception as e:
                     current_app.logger.error(f"Error processing job titles: {str(e)}")
                     flash(f"Error processing job titles: {str(e)}", "danger")
+            else:
+                # Empty or missing field - set to empty list
+                current_user._desired_job_titles = json.dumps([])
             
-            # Process portfolio links
+            # Process portfolio links - handle empty case
             portfolio_links_json = request.form.get('portfolio_links')
             if portfolio_links_json:
                 current_app.logger.debug(f"Raw portfolio links: {portfolio_links_json}")
                 portfolio_links = json.loads(portfolio_links_json)
                 current_user.portfolio_links = portfolio_links
+            else:
+                # Empty or missing field - set to empty list
+                current_user._portfolio_links = json.dumps([])
             
-            # Process certifications
+            # Process certifications - handle empty case
             certifications_json = request.form.get('certifications')
             if certifications_json:
                 current_user.certifications = json.loads(certifications_json)
+            else:
+                # Empty or missing field - set to empty list
+                current_user._certifications = json.dumps([])
             
-            # Process languages
+            # Process languages - handle empty case
             languages_json = request.form.get('languages')
             if languages_json:
                 current_user.languages = json.loads(languages_json)
+            else:
+                # Empty or missing field - set to empty list
+                current_user._languages = json.dumps([])
             
-            # Process applicant values
+            # Process applicant values - handle empty case
             values_json = request.form.get('applicant_values')
             if values_json:
                 current_user.applicant_values = json.loads(values_json)
+            else:
+                # Empty or missing field - set to empty list
+                current_user._applicant_values = json.dumps([])
                 
-            # Process projects
+            # Process projects - handle empty case
             projects_json = request.form.get('projects')
             if projects_json:
                 current_user.projects = json.loads(projects_json)
+            else:
+                # Empty or missing field - set to empty list
+                current_user._projects = json.dumps([])
                 
         except json.JSONDecodeError as e:
             current_app.logger.error(f"JSON parsing error: {str(e)}")
             flash(f"Error processing form data: {str(e)}", "danger")
         
-        # Process other fields
-        current_user.desired_salary_range = request.form.get('desired_salary_range')
-        current_user.work_mode_preference = request.form.get('work_mode_preference')
+        # Process other fields - handle empty cases explicitly
+        current_user.desired_salary_range = request.form.get('desired_salary_range', '')
+        current_user.work_mode_preference = request.form.get('work_mode_preference', '')
+        current_user.skills = request.form.get('skills', '')
+        current_user.experience = request.form.get('experience', '')
         
         # Process date field
         start_date = request.form.get('available_start_date')
@@ -101,15 +121,15 @@ def profile():
         else:
             current_user.available_start_date = None
             
-        current_user.preferred_company_type = request.form.get('preferred_company_type')
-        current_user.career_goals = request.form.get('career_goals')
-        current_user.biggest_achievement = request.form.get('biggest_achievement')
-        current_user.work_style = request.form.get('work_style')
-        current_user.industry_attraction = request.form.get('industry_attraction')
+        current_user.preferred_company_type = request.form.get('preferred_company_type', '')
+        current_user.career_goals = request.form.get('career_goals', '')
+        current_user.biggest_achievement = request.form.get('biggest_achievement', '')
+        current_user.work_style = request.form.get('work_style', '')
+        current_user.industry_attraction = request.form.get('industry_attraction', '')
         
-        # Process demographic information fields
-        current_user.race_ethnicity = request.form.get('race_ethnicity')
-        current_user.gender = request.form.get('gender')
+        # Process demographic information fields - handle empty cases
+        current_user.race_ethnicity = request.form.get('race_ethnicity', '')
+        current_user.gender = request.form.get('gender', '')
         
         # Process graduation date
         grad_date = request.form.get('graduation_date')
@@ -121,9 +141,9 @@ def profile():
         else:
             current_user.graduation_date = None
         
-        current_user.disability_status = request.form.get('disability_status')
-        current_user.military_status = request.form.get('military_status')
-        current_user.military_branch = request.form.get('military_branch')
+        current_user.disability_status = request.form.get('disability_status', '')
+        current_user.military_status = request.form.get('military_status', '')
+        current_user.military_branch = request.form.get('military_branch', '')
         
         # Process military discharge date
         discharge_date = request.form.get('military_discharge_date')
@@ -135,9 +155,9 @@ def profile():
         else:
             current_user.military_discharge_date = None
             
-        current_user.veteran_status = request.form.get('veteran_status')
+        current_user.veteran_status = request.form.get('veteran_status', '')
         current_user.needs_sponsorship = 'needs_sponsorship' in request.form
-        current_user.visa_status = request.form.get('visa_status')
+        current_user.visa_status = request.form.get('visa_status', '')
         
         # Process resume text
         current_user.resume = request.form.get('resume', '')
