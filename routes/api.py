@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify, current_app, render_template, send_file, send_from_directory, abort
-from utils.application_filler import valid_url
+# Updated import for modular application filler
+from utils.application_filler import ApplicationFiller
+from utils.application_filler.utils import valid_url
 from flask_login import login_required, current_user
 # Update import to use the new job_search module
 from utils.job_search.job_search import search_jobs
-from utils.application_filler import generate_application_responses
 from utils.job_search.job_submitter import submit_application
 from utils.document_parser import parse_and_save_resume, get_resume_file
 from models.user import User, db
@@ -369,49 +370,62 @@ def apply():
     # Use current_user instead of querying by user_id
     user = current_user
     
-    from utils.application_filler import ApplicationFiller
-    # Instantiate the ApplicationFiller class
+    # Instantiate the ApplicationFiller class using the new modular structure
     app_filler = ApplicationFiller(user, job_url=job_url)
     
-    # Create the Playwright page object and fill the application form
-    from playwright.async_api import async_playwright
-    async def fill_application():
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
-            context = await browser.new_context()
-            page = await context.new_page()
-            try:
-                await app_filler.fill_application(page)
-            finally:
-                await browser.close()
+    # Define an async function to run the application process
+    async def run_application_process():
+        try:
+            # Use the new fill_application method which handles the entire process
+            result = await app_filler.fill_application()
+            return result
+        except Exception as e:
+            current_app.logger.error(f"ApplicationFiller error: {str(e)}")
+            return {
+                "success": False,
+                "message": f"ApplicationFiller failed: {str(e)}",
+                "url": job_url,
+                "user": user.email
+            }
     
     try:
+        # Run the async function
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(fill_application())
+        result = loop.run_until_complete(run_application_process())
         loop.close()
-    
-        # After successful form filling, generate responses and submit the application
-        application_responses = generate_application_responses(job_url, user)
-        result = submit_application(job_url, user, application_responses)
-    
-        if result['success']:
+        
+        # Create application record in the database
+        if result.get('success'):
             application = Application(
                 user_id=user.id,
                 job_id=data.get('job_id'),
                 company=data.get('company', 'Unknown'),
                 position=data.get('title', 'Unknown'),
                 status='Submitted',
-                response_data=str(application_responses)
+                response_data=str(result)
             )
             db.session.add(application)
             db.session.commit()
             result['application_id'] = application.id
-    
+            
+            # If this was applied to a job recommendation, mark it as applied
+            if data.get('recommendation_id'):
+                rec = JobRecommendation.query.filter_by(
+                    id=data.get('recommendation_id'),
+                    user_id=user.id
+                ).first()
+                if rec:
+                    rec.applied = True
+                    db.session.commit()
+        
         return jsonify(result)
     except Exception as e:
         current_app.logger.error(f"Application process failed: {str(e)}")
-        return jsonify({'error': 'Failed to apply'}), 500
+        return jsonify({
+            'error': 'Failed to apply',
+            'details': str(e)
+        }), 500
 
 @api_bp.route('/user', methods=['POST'])
 @login_required
