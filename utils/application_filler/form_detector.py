@@ -1,291 +1,354 @@
 """
-Module for detecting different application form types
+Form detection functionality for application filler
 """
+import re
 import logging
-import asyncio
-from playwright.async_api import Page
-
-from .utils import save_full_page_screenshot
+from typing import Dict, List, Optional, Tuple, Any
+from playwright.async_api import Page, ElementHandle
 
 logger = logging.getLogger(__name__)
 
-async def check_and_click_apply_button(page: Page):
+# Form type constants
+FORM_TYPE_LINKEDIN = "linkedin"
+FORM_TYPE_INDEED = "indeed"
+FORM_TYPE_GREENHOUSE = "greenhouse" 
+FORM_TYPE_LEVER = "lever"
+FORM_TYPE_WORKDAY = "workday"
+FORM_TYPE_JOBVITE = "jobvite"
+FORM_TYPE_TALEO = "taleo"
+FORM_TYPE_SMARTRECRUITERS = "smartrecruiters"
+FORM_TYPE_UNKNOWN = "unknown"
+
+# Button and link text patterns for various actions
+APPLY_BUTTON_PATTERNS = [
+    r'(?i)^apply$', 
+    r'(?i)^apply now$',
+    r'(?i)^easy apply$',
+    r'(?i)^submit application$',
+    r'(?i)^submit$',
+    r'(?i)^continue$',
+    r'(?i)^next$',
+    r'(?i)^begin application$',
+    r'(?i)^start application$',
+    r'(?i)^i agree$'
+]
+
+SKIP_BUTTON_PATTERNS = [
+    r'(?i)^skip$',
+    r'(?i)^skip this step$',
+    r'(?i)^skip for now$',
+    r'(?i)^i\'ll do this later$',
+    r'(?i)^not now$'
+]
+
+SUBMIT_BUTTON_PATTERNS = [
+    r'(?i)^submit$',
+    r'(?i)^submit application$',
+    r'(?i)^send$',
+    r'(?i)^send application$',
+    r'(?i)^finish$',
+    r'(?i)^complete$',
+    r'(?i)^complete application$'
+]
+
+async def detect_form_type(page: Page) -> str:
     """
-    Look for and click an "Apply" button if one exists.
+    Detect the type of application form/system being used
     
     Args:
-        page: The Playwright page object
+        page: The playwright page object
         
     Returns:
-        bool: True if an apply button was found and clicked
+        The detected form type as a string
     """
-    # Common selectors for apply buttons
-    apply_button_selectors = [
-        'button:has-text("Apply")', 
+    url = page.url
+    
+    # Check URL patterns first
+    if 'linkedin.com' in url:
+        return FORM_TYPE_LINKEDIN
+    elif 'indeed.com' in url:
+        return FORM_TYPE_INDEED
+    elif 'greenhouse.io' in url:
+        return FORM_TYPE_GREENHOUSE
+    elif 'lever.co' in url:
+        return FORM_TYPE_LEVER
+    elif 'myworkdayjobs.com' in url or 'myworkday.com' in url:
+        return FORM_TYPE_WORKDAY
+    elif 'jobvite.com' in url:
+        return FORM_TYPE_JOBVITE
+    elif 'taleo.net' in url:
+        return FORM_TYPE_TALEO
+    elif 'smartrecruiters.com' in url:
+        return FORM_TYPE_SMARTRECRUITERS
+        
+    # If URL doesn't give it away, check page content
+    content = await page.content()
+    content = content.lower()
+    
+    if 'powered by greenhouse' in content or 'greenhouse job board' in content:
+        return FORM_TYPE_GREENHOUSE
+    elif 'powered by lever' in content or 'jobs by lever' in content:
+        return FORM_TYPE_LEVER
+    elif 'powered by jobvite' in content:
+        return FORM_TYPE_JOBVITE
+    elif 'powered by workday' in content or 'workday' in content:
+        return FORM_TYPE_WORKDAY
+    elif 'taleo' in content:
+        return FORM_TYPE_TALEO
+    elif 'linkedin' in content and 'easy apply' in content:
+        return FORM_TYPE_LINKEDIN
+    elif 'smartrecruiters' in content:
+        return FORM_TYPE_SMARTRECRUITERS
+    elif 'indeed' in content and 'apply now' in content:
+        return FORM_TYPE_INDEED
+        
+    # Check for specific elements
+    try:
+        if await page.locator('div[data-test="easy-apply-button"]').count() > 0:
+            return FORM_TYPE_LINKEDIN
+        if await page.locator('button[data-testid="indeedApplyButton"]').count() > 0:
+            return FORM_TYPE_INDEED
+    except Exception:
+        # Ignore element check errors
+        pass
+        
+    return FORM_TYPE_UNKNOWN
+
+async def find_apply_button(page: Page) -> Optional[ElementHandle]:
+    """
+    Find the apply button on a job posting
+    
+    Args:
+        page: The playwright page object
+        
+    Returns:
+        The apply button element if found, None otherwise
+    """
+    # First check for specific button selectors by ATS type
+    form_type = await detect_form_type(page)
+    
+    if form_type == FORM_TYPE_LINKEDIN:
+        # LinkedIn specific apply buttons
+        try:
+            # Try for the primary Easy Apply button
+            easy_apply_btn = await page.wait_for_selector(
+                'div[data-test="easy-apply-button"], button:has-text("Easy Apply")', 
+                timeout=2000
+            )
+            if easy_apply_btn:
+                return easy_apply_btn
+        except Exception:
+            pass
+    
+    elif form_type == FORM_TYPE_INDEED:
+        # Indeed specific apply buttons
+        try:
+            indeed_btn = await page.wait_for_selector(
+                'button[data-testid="indeedApplyButton"], ' + 
+                'button.jobsearch-IndeedApplyButton-newDesign',
+                timeout=2000
+            )
+            if indeed_btn:
+                return indeed_btn
+        except Exception:
+            pass
+    
+    # Generic apply button finders for all ATS systems
+    button_selectors = [
+        'button:has-text("Apply")',
         'button:has-text("Apply Now")',
+        'button:has-text("Easy Apply")',
+        'button:has-text("Submit Application")',
         'a:has-text("Apply")',
         'a:has-text("Apply Now")',
-        'a.apply-button',
-        'button.apply-button',
-        '[data-automation="apply-button"]',
-        '[aria-label*="apply"]'
+        'a.button:has-text("Apply")',
+        'div.apply-button',
+        'div[role="button"]:has-text("Apply")'
     ]
     
-    for selector in apply_button_selectors:
+    # Try each selector
+    for selector in button_selectors:
         try:
-            logger.info(f"Looking for apply button with selector: {selector}")
-            button = await page.query_selector(selector)
-            if button:
-                # Check if button is visible
-                is_visible = await button.is_visible()
-                if is_visible:
-                    logger.info(f"Found apply button with selector: {selector}")
-                    await button.click()
-                    logger.info("Clicked apply button")
-                    return True
-        except Exception as e:
-            logger.debug(f"Error checking apply button selector '{selector}': {str(e)}")
+            element = await page.wait_for_selector(selector, timeout=2000)
+            if element:
+                return element
+        except Exception:
+            # Try next selector if this one fails
+            continue
     
-    logger.info("No apply button found or could not be clicked")
-    return False
+    # If we still haven't found a button, look for any button or link containing apply text
+    all_buttons = await page.query_selector_all('button, a.button, a[role="button"], div[role="button"]')
+    
+    for btn in all_buttons:
+        try:
+            text = await btn.inner_text()
+            # Check for common apply button text patterns
+            for pattern in APPLY_BUTTON_PATTERNS:
+                if re.search(pattern, text):
+                    return btn
+        except Exception:
+            continue
+    
+    return None
 
-async def detect_and_handle_form_type(page: Page):
+async def find_next_button(page: Page) -> Optional[ElementHandle]:
     """
-    Detect what type of application form we're dealing with and handle it appropriately.
+    Find the next/continue button in a multi-step application form
     
     Args:
-        page: The Playwright page object
+        page: The playwright page object
         
     Returns:
-        bool: True if a form was detected and handled
+        The next/continue button element if found, None otherwise
     """
-    # Take a screenshot before detection
-    await save_full_page_screenshot(page, "before_form_detection")
-    
-    # Check for different types of application forms
-    form_types = [
-        check_for_standard_form,
-        check_for_greenhouse_form,
-        check_for_lever_form,
-        check_for_workday_form,
-        check_for_ashby_form,
-        check_for_indeed_form,
-        check_for_linkedin_form
+    # Common next/continue button selectors
+    next_button_selectors = [
+        'button:has-text("Next")', 
+        'button:has-text("Continue")',
+        'button.next-button',
+        'button.continue-button',
+        'button[data-test="continue-button"]',
+        'button[data-control-name="continue_unify"]',
+        'button:has-text("Save and Continue")'
     ]
     
-    for check_function in form_types:
+    # Try each selector
+    for selector in next_button_selectors:
         try:
-            logger.info(f"Trying form detection with {check_function.__name__}")
-            form_detected = await check_function(page)
-            if form_detected:
-                logger.info(f"Form detected with {check_function.__name__}")
-                return True
-        except Exception as e:
-            logger.error(f"Error in {check_function.__name__}: {str(e)}")
+            element = await page.wait_for_selector(selector, timeout=2000)
+            if element:
+                return element
+        except Exception:
+            # Try next selector
+            continue
     
-    logger.warning("No form type detected")
-    return False
-
-async def check_for_standard_form(page: Page):
-    """Check for a standard HTML form"""
-    form = await page.query_selector('form')
-    if form:
-        logger.info("Standard form detected")
-        return True
-    return False
-
-async def check_for_greenhouse_form(page: Page):
-    """Check for Greenhouse ATS form"""
-    if 'greenhouse' in await page.content():
-        logger.info("Greenhouse form detected")
-        # Handle Greenhouse specific logic here
-        return True
-    return False
-
-async def check_for_lever_form(page: Page):
-    """Check for Lever ATS form"""
-    if 'lever' in await page.content():
-        logger.info("Lever form detected")
-        # Handle Lever specific logic here
-        return True
-    return False
-
-async def check_for_workday_form(page: Page):
-    """Check for Workday ATS form"""
-    if 'workday' in await page.content():
-        logger.info("Workday form detected")
-        # Handle Workday specific logic here
-        return True
-    return False
-
-async def check_for_ashby_form(page: Page):
-    """Check for Ashby ATS form"""
-    url = page.url
-    if 'ashbyhq' in url or 'ashby' in await page.content():
-        logger.info("Ashby form detected")
-        
-        # Look for and click the first step in the application
+    # If we haven't found a button yet, look for any button with next/continue text
+    all_buttons = await page.query_selector_all('button')
+    
+    for btn in all_buttons:
         try:
-            # Check if there's a "start application" or similar button
-            start_buttons = [
-                'button:has-text("Start")',
-                'button:has-text("Begin")',
-                'button:has-text("Start Application")',
-                'a:has-text("Start Application")'
-            ]
+            text = await btn.inner_text()
+            if re.search(r'(?i)next|continue|proceed|save', text):
+                return btn
+        except Exception:
+            continue
             
-            for selector in start_buttons:
-                button = await page.query_selector(selector)
-                if button and await button.is_visible():
-                    await button.click()
-                    logger.info(f"Clicked start button with selector: {selector}")
-                    await asyncio.sleep(2)
-                    await save_full_page_screenshot(page, "after_ashby_start_button")
-                    break
-            
-            # Look for name input fields - Ashby typically has these at the beginning
-            name_fields = await page.query_selector_all('input[name*="name"], input[placeholder*="name"]')
-            if name_fields:
-                for field in name_fields:
-                    field_name = await field.get_attribute('name') or await field.get_attribute('placeholder') or "unknown"
-                    if "first" in field_name.lower():
-                        await field.fill("First Name")  # Placeholder - this will be replaced by user data
-                    elif "last" in field_name.lower():
-                        await field.fill("Last Name")   # Placeholder - this will be replaced by user data
-                    else:
-                        await field.fill("Full Name")   # Placeholder - this will be replaced by user data
-            
-            # Look for email input
-            email_field = await page.query_selector('input[type="email"], input[name*="email"], input[placeholder*="email"]')
-            if email_field:
-                await email_field.fill("email@example.com")  # Placeholder - this will be replaced by user data
-            
-            # Look for "Next" button to proceed to questions
-            next_buttons = [
-                'button:has-text("Next")',
-                'button:has-text("Continue")',
-                'button[type="submit"]',
-                'button.next-button'
-            ]
-            
-            for selector in next_buttons:
-                button = await page.query_selector(selector)
-                if button and await button.is_visible():
-                    await button.click()
-                    logger.info(f"Clicked next button with selector: {selector}")
-                    await asyncio.sleep(3)
-                    await save_full_page_screenshot(page, "after_ashby_next_button")
-                    break
-        except Exception as e:
-            logger.error(f"Error handling Ashby form: {str(e)}")
-        
-        return True
-    return False
+    return None
 
-async def check_for_indeed_form(page: Page):
-    """Check for Indeed application form"""
-    url = page.url
-    if 'indeed' in url or 'indeed' in await page.content():
-        logger.info("Indeed form detected")
-        
-        # Handle Indeed specific logic here
-        try:
-            # Look for "Apply now" button
-            apply_buttons = await page.query_selector_all('button:has-text("Apply now"), a:has-text("Apply now")')
-            if apply_buttons:
-                await apply_buttons[0].click()
-                logger.info("Clicked 'Apply now' button on Indeed")
-                await asyncio.sleep(2)
-        except Exception as e:
-            logger.error(f"Error with Indeed apply button: {str(e)}")
-            
-        return True
-    return False
-
-async def check_for_linkedin_form(page: Page):
-    """Check for LinkedIn EasyApply form"""
-    url = page.url
-    if 'linkedin.com/jobs' in url:
-        logger.info("LinkedIn job page detected")
-        
-        try:
-            # Look for "Easy Apply" button
-            easy_apply_buttons = [
-                'button:has-text("Easy Apply")',
-                'button:has-text("Apply")',
-                'button.jobs-apply-button'
-            ]
-            
-            for selector in easy_apply_buttons:
-                button = await page.query_selector(selector)
-                if button and await button.is_visible():
-                    await button.click()
-                    logger.info(f"Clicked LinkedIn apply button with selector: {selector}")
-                    await asyncio.sleep(3)
-                    await save_full_page_screenshot(page, "after_linkedin_apply_button")
-                    
-                    # LinkedIn often has a multi-step application form
-                    # Look for next button to navigate through steps
-                    next_buttons = [
-                        'button:has-text("Next")',
-                        'button:has-text("Continue")',
-                        'button[aria-label="Continue to next step"]'
-                    ]
-                    
-                    for next_selector in next_buttons:
-                        next_button = await page.query_selector(next_selector)
-                        if next_button and await next_button.is_visible():
-                            await next_button.click()
-                            logger.info("Clicked LinkedIn next button")
-                            await asyncio.sleep(2)
-                            await save_full_page_screenshot(page, "linkedin_next_step")
-                            break
-                    
-                    return True
-        except Exception as e:
-            logger.error(f"Error with LinkedIn apply button: {str(e)}")
-            
-        return True
-    return False
-
-async def find_and_click_submit_button(page: Page):
+async def find_submit_button(page: Page) -> Optional[ElementHandle]:
     """
-    Find and click the submit button to complete the application.
+    Find the final submit button in an application form
     
     Args:
-        page: The Playwright page object
+        page: The playwright page object
         
     Returns:
-        bool: True if submit button was found and clicked
+        The submit button element if found, None otherwise
     """
-    # Common submit button selectors
     submit_selectors = [
-        'button[type="submit"]',
         'button:has-text("Submit")',
         'button:has-text("Submit Application")',
-        'button:has-text("Apply")',
-        'input[type="submit"]',
-        'button.submit-button',
+        'button:has-text("Send")',
         'button:has-text("Send Application")',
-        'button:has-text("Complete Application")'
+        'button:has-text("Complete")',
+        'button:has-text("Complete Application")',
+        'button[type="submit"]'
     ]
     
-    # Take a screenshot before looking for submit button
-    await save_full_page_screenshot(page, "before_submit_button")
-    
+    # Try each selector
     for selector in submit_selectors:
         try:
-            logger.info(f"Looking for submit button with selector: {selector}")
-            submit_button = await page.query_selector(selector)
-            if submit_button:
-                is_visible = await submit_button.is_visible()
-                if is_visible:
-                    logger.info(f"Found submit button with selector: {selector}")
-                    await submit_button.click()
-                    logger.info("Clicked submit button")
-                    return True
-        except Exception as e:
-            logger.debug(f"Error checking submit button selector '{selector}': {str(e)}")
+            element = await page.wait_for_selector(selector, timeout=2000)
+            if element:
+                return element
+        except Exception:
+            # Try next selector
+            continue
+    
+    # If we haven't found a submit button, check all buttons
+    all_buttons = await page.query_selector_all('button')
+    
+    for btn in all_buttons:
+        try:
+            text = await btn.inner_text()
+            for pattern in SUBMIT_BUTTON_PATTERNS:
+                if re.search(pattern, text):
+                    return btn
+        except Exception:
+            continue
             
-    logger.warning("No submit button found or could not be clicked")
-    return False
+    return None
+
+async def detect_and_handle_form_type(page: Page) -> Tuple[str, Dict[str, Any]]:
+    """
+    Detect the form type and return appropriate handling strategy.
+    
+    Args:
+        page: The playwright page object
+        
+    Returns:
+        Tuple containing form type string and additional metadata.
+    """
+    form_type = await detect_form_type(page)
+    
+    # Initialize form metadata
+    form_metadata = {
+        "form_type": form_type,
+        "detected_fields": [],
+        "special_handling_required": False,
+        "is_multi_step": False
+    }
+    
+    # Set form-specific handling information
+    if form_type == FORM_TYPE_LINKEDIN:
+        form_metadata["special_handling_required"] = True
+        form_metadata["is_multi_step"] = True
+        logger.info("LinkedIn form detected - special handling enabled")
+    elif form_type == FORM_TYPE_INDEED:
+        form_metadata["special_handling_required"] = True
+        form_metadata["is_multi_step"] = True
+        logger.info("Indeed form detected - special handling enabled")
+    elif form_type == FORM_TYPE_GREENHOUSE:
+        form_metadata["is_multi_step"] = False
+        logger.info("Greenhouse form detected")
+    elif form_type == FORM_TYPE_LEVER:
+        form_metadata["is_multi_step"] = False
+        logger.info("Lever form detected")
+    elif form_type == FORM_TYPE_WORKDAY:
+        form_metadata["special_handling_required"] = True
+        form_metadata["is_multi_step"] = True
+        logger.info("Workday form detected - special handling enabled")
+    else:
+        logger.info(f"Generic form handling for type: {form_type}")
+    
+    return form_type, form_metadata
+
+async def find_and_click_submit_button(page: Page) -> bool:
+    """
+    Find and click the submit button on the page.
+    
+    Args:
+        page: The playwright page object
+        
+    Returns:
+        Boolean indicating whether the submit button was found and clicked.
+    """
+    logger.info("Looking for submit button")
+    
+    # Try to find the submit button
+    submit_button = await find_submit_button(page)
+    
+    if submit_button:
+        logger.info("Submit button found, clicking")
+        try:
+            # Click the submit button
+            await submit_button.click()
+            await page.wait_for_load_state("networkidle", timeout=5000)
+            logger.info("Submit button clicked successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error clicking submit button: {str(e)}")
+            return False
+    else:
+        logger.warning("No submit button found")
+        return False

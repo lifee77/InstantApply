@@ -1,103 +1,228 @@
 """
-Maps application form questions to user profile fields
+Field mapper for application forms
+Maps form field questions/labels to user profile fields
 """
 import re
-import logging
+from typing import Dict, Optional
 
-logger = logging.getLogger(__name__)
+# Field mapping patterns
+NAME_PATTERNS = [
+    r'(?i)full\s*name',
+    r'(?i)^name$',
+    r'(?i)your\s*name',
+    r'(?i)preferred\s*name',
+    r'(?i)legal\s*name',
+    r'(?i)first\s*and\s*last\s*name'
+]
 
-# Dictionary mapping question patterns to user profile fields
-QUESTION_TO_FIELD_MAP = {
-    # Name related questions
-    r'(?i)(?:your|full|legal)?\s*name': 'name',
-    
-    # Email related questions
-    r'(?i)(?:your|work|personal)?\s*email': 'email',
-    
-    # Phone related questions
-    r'(?i)(?:your|mobile|phone|cell)\s*(?:number|phone|#)': 'phone',
-    
-    # Professional summary related questions
-    r'(?i)(?:tell us about yourself|introduce yourself|professional summary|summary of qualifications|career summary|profile summary)': 'professional_summary',
-    
-    # Skills related questions
-    r'(?i)(?:your|technical|professional|key)?\s*(?:skills|expertise|strengths|competencies)': 'skills',
-    r'(?i)what (?:technical|programming|development) (?:languages|tools|frameworks) (?:do you|are you|have you)': 'skills',
-    
-    # Experience related questions
-    r'(?i)(?:your|work|professional|relevant)?\s*(?:experience|background|history)': 'experience',
-    r'(?i)tell us about your (?:experience|background|work history)': 'experience',
-    r'(?i)years of experience': 'experience',
-    
-    # Career goals related questions
-    r'(?i)(?:your|career|professional)?\s*(?:goals|objectives|aspirations)': 'career_goals',
-    r'(?i)where do you see yourself': 'career_goals',
-    
-    # Achievements related questions
-    r'(?i)(?:your|greatest|biggest|significant)?\s*(?:achievement|accomplishment)': 'biggest_achievement',
-    
-    # Work style related questions
-    r'(?i)(?:your|preferred)?\s*(?:work style|working style|work preference)': 'work_style',
-    r'(?i)(?:describe|tell us about) your (?:work style|working style|approach to work)': 'work_style',
-    
-    # Industry attraction related questions
-    r'(?i)why (?:are you interested in|do you want to work in) this (?:industry|field|role|position)': 'industry_attraction',
-    
-    # Relocation related questions
-    r'(?i)(?:are you willing to|would you consider|can you) relocate': 'willing_to_relocate',
-    r'(?i)willing(?:ness)? to relocate': 'willing_to_relocate',
-    
-    # Work authorization related questions
-    r'(?i)(?:are you|work) authoriz(?:ed|ation)': 'authorization_status',
-    r'(?i)(?:legal|eligible) to work': 'authorization_status',
-    
-    # Start date related questions
-    r'(?i)(?:when can you|earliest|available|start) (?:start|date)': 'available_start_date',
-    
-    # Portfolio/LinkedIn questions
-    r'(?i)(?:your|professional)?\s*(?:portfolio|website|linkedin|github)': 'portfolio_links'
+FIRST_NAME_PATTERNS = [
+    r'(?i)first\s*name',
+    r'(?i)given\s*name',
+    r'(?i)forename'
+]
+
+LAST_NAME_PATTERNS = [
+    r'(?i)last\s*name',
+    r'(?i)family\s*name',
+    r'(?i)surname'
+]
+
+EMAIL_PATTERNS = [
+    r'(?i)e\-?mail',
+    r'(?i)email\s*address',
+    r'(?i)your\s*email'
+]
+
+PHONE_PATTERNS = [
+    r'(?i)phone',
+    r'(?i)mobile',
+    r'(?i)cell',
+    r'(?i)telephone'
+]
+
+ADDRESS_PATTERNS = [
+    r'(?i)address',
+    r'(?i)street',
+    r'(?i)location'
+]
+
+CITY_PATTERNS = [
+    r'(?i)city',
+    r'(?i)town'
+]
+
+STATE_PATTERNS = [
+    r'(?i)state',
+    r'(?i)province',
+    r'(?i)region'
+]
+
+ZIP_PATTERNS = [
+    r'(?i)zip',
+    r'(?i)postal\s*code',
+    r'(?i)post\s*code'
+]
+
+COUNTRY_PATTERNS = [
+    r'(?i)country',
+    r'(?i)nation'
+]
+
+EDUCATION_PATTERNS = [
+    r'(?i)education',
+    r'(?i)degree',
+    r'(?i)qualification',
+    r'(?i)university',
+    r'(?i)college',
+    r'(?i)school'
+]
+
+EXPERIENCE_PATTERNS = [
+    r'(?i)experience',
+    r'(?i)work\s*history',
+    r'(?i)employment',
+    r'(?i)job\s*history'
+]
+
+SKILLS_PATTERNS = [
+    r'(?i)skills',
+    r'(?i)abilities',
+    r'(?i)competencies',
+    r'(?i)qualifications'
+]
+
+LINKEDIN_PATTERNS = [
+    r'(?i)linkedin',
+    r'(?i)linkedin\s*profile',
+    r'(?i)linkedin\s*url'
+]
+
+GITHUB_PATTERNS = [
+    r'(?i)github',
+    r'(?i)github\s*profile',
+    r'(?i)github\s*url'
+]
+
+WEBSITE_PATTERNS = [
+    r'(?i)website',
+    r'(?i)personal\s*website',
+    r'(?i)portfolio',
+    r'(?i)blog'
+]
+
+COVER_LETTER_PATTERNS = [
+    r'(?i)cover\s*letter',
+    r'(?i)application\s*letter',
+    r'(?i)motivation',
+    r'(?i)why\s*do\s*you\s*want\s*to\s*work',
+    r'(?i)why\s*are\s*you\s*interested',
+    r'(?i)why\s*should\s*we\s*hire\s*you'
+]
+
+RESUME_PATTERNS = [
+    r'(?i)resume',
+    r'(?i)cv',
+    r'(?i)curriculum\s*vitae',
+    r'(?i)upload\s*resume',
+    r'(?i)upload\s*cv'
+]
+
+# Pattern to field mapping
+FIELD_PATTERNS = {
+    'name': NAME_PATTERNS,
+    'first_name': FIRST_NAME_PATTERNS,
+    'last_name': LAST_NAME_PATTERNS,
+    'email': EMAIL_PATTERNS,
+    'phone': PHONE_PATTERNS,
+    'address': ADDRESS_PATTERNS,
+    'city': CITY_PATTERNS,
+    'state': STATE_PATTERNS,
+    'zip_code': ZIP_PATTERNS,
+    'country': COUNTRY_PATTERNS,
+    'education': EDUCATION_PATTERNS,
+    'experience': EXPERIENCE_PATTERNS,
+    'skills': SKILLS_PATTERNS,
+    'linkedin_url': LINKEDIN_PATTERNS,
+    'github_url': GITHUB_PATTERNS,
+    'website': WEBSITE_PATTERNS,
+    'cover_letter': COVER_LETTER_PATTERNS,
+    'resume': RESUME_PATTERNS
 }
 
-def map_question_to_field(question_text: str) -> str:
+# Field priority order (for when multiple patterns match)
+FIELD_PRIORITY = [
+    'resume',
+    'first_name',
+    'last_name',
+    'name',
+    'email',
+    'phone',
+    'address',
+    'city',
+    'state',
+    'zip_code',
+    'country',
+    'education',
+    'experience',
+    'skills',
+    'linkedin_url',
+    'github_url',
+    'website',
+    'cover_letter'
+]
+
+def map_question_to_field(question: str) -> Optional[str]:
     """
-    Maps a question to a user profile field.
+    Map a form question/label to a user profile field
     
     Args:
-        question_text: The question to map
-    
+        question: The question or label text from the form
+        
     Returns:
-        The name of the user profile field that best matches the question, or empty string if no match
+        The mapped field name or None if no mapping found
     """
-    if not question_text:
-        return ""
+    if not question:
+        return None
+        
+    matches = []
     
-    # Clean the question text (remove punctuation, extra spaces)
-    clean_text = question_text.strip()
+    # Check for matches in our patterns
+    for field, patterns in FIELD_PATTERNS.items():
+        for pattern in patterns:
+            if re.search(pattern, question):
+                matches.append(field)
+                break
     
-    # Try to match the question against our patterns
-    for pattern, field in QUESTION_TO_FIELD_MAP.items():
-        if re.search(pattern, clean_text):
-            logger.debug(f"Mapped question '{clean_text}' to field '{field}' using pattern '{pattern}'")
-            return field
-    
-    # If no direct match, try a more flexible approach with keyword matching
-    keywords = {
-        'name': ['name', 'full name', 'legal name'],
-        'email': ['email', 'e-mail', 'electronic mail'],
-        'phone': ['phone', 'telephone', 'mobile', 'cell'],
-        'skills': ['skills', 'abilities', 'competencies', 'qualifications', 'expertise'],
-        'experience': ['experience', 'work history', 'employment history', 'job history'],
-        'work_style': ['work style', 'working style', 'team work', 'collaboration'],
-        'career_goals': ['goals', 'objectives', 'aspirations', 'career plan']
-    }
-    
-    lower_text = clean_text.lower()
-    for field, field_keywords in keywords.items():
-        for keyword in field_keywords:
-            if keyword.lower() in lower_text:
-                logger.debug(f"Mapped question '{clean_text}' to field '{field}' using keyword '{keyword}'")
+    # If multiple matches, use priority order
+    if len(matches) > 1:
+        for field in FIELD_PRIORITY:
+            if field in matches:
                 return field
+    elif len(matches) == 1:
+        return matches[0]
     
-    # No match found
-    logger.debug(f"No mapping found for question: '{clean_text}'")
-    return ""
+    return None
+    
+def generate_answer(field: str, user_data: Dict[str, str]) -> Optional[str]:
+    """
+    Generate an answer for a form field based on user data
+    
+    Args:
+        field: The mapped field name
+        user_data: Dictionary containing user profile data
+        
+    Returns:
+        The answer string or None if no data available
+    """
+    if field in user_data and user_data[field]:
+        return user_data[field]
+    
+    # Special handling for combined fields
+    if field == 'name' and 'first_name' in user_data and 'last_name' in user_data:
+        return f"{user_data['first_name']} {user_data['last_name']}"
+    
+    # Special handling for address
+    if field == 'address' and 'street' in user_data:
+        return user_data['street']
+        
+    return None

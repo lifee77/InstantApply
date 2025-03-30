@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any
 from flask import current_app
 import google.generativeai as genai
-from application_filler.mappers.field_mapper import map_question_to_field
+from .mappers.field_mapper import map_question_to_field
 
 logger = logging.getLogger(__name__)
 

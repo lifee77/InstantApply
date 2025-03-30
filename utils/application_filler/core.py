@@ -6,8 +6,7 @@ import time
 import logging
 import asyncio
 from typing import Dict, Any
-from playwright.async_api import async_playwright, Playwright, Page
-from flask import current_app
+from playwright.async_api import Page
 
 from models.user import User
 from .utils import valid_url, save_full_page_screenshot
@@ -18,6 +17,7 @@ from .form_detector import (
 )
 from .form_filler import FormFiller
 from .response_generator import ResponseGenerator
+from .browser_manager import BrowserManager
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,7 @@ class ApplicationFiller:
         # Initialize components
         self.response_generator = ResponseGenerator(self.user_data)
         self.form_filler = FormFiller(self.response_generator)
+        self.browser_manager = BrowserManager()
 
     async def fill_application(self):
         """
@@ -86,122 +87,255 @@ class ApplicationFiller:
         logger.info(f"Starting application process for {self.job_url}")
         
         try:
-            async with async_playwright() as p:
-                # Launch browser with more stable parameters
-                browser = await p.firefox.launch(
-                    headless=False,  # Keep browser visible
-                    slow_mo=100,    # Slow down automation for stability
-                    args=[
-                        "--no-sandbox",
-                        "--disable-gpu",
-                        "--disable-dev-shm-usage",
-                    ]
-                )
+            # Create browser using the browser manager
+            browser, context, page = await self.browser_manager.create_browser()
+            
+            try:
+                # Navigate to the job URL
+                navigation_success = await self.browser_manager.navigate_with_retry(page, self.job_url)
                 
-                # Create a context with viewport size and user agent
-                context = await browser.new_context(
-                    viewport={"width": 1280, "height": 720},
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36"
-                )
+                if not navigation_success:
+                    result["message"] = f"Failed to navigate to {self.job_url}"
+                    logger.error(result["message"])
+                    return result
                 
-                # Open new page and navigate
-                page = await context.new_page()
-                await page.goto(self.job_url, timeout=60000)
-                
-                # Wait for the page to load
+                # Take a screenshot of the initial page
                 try:
-                    await page.wait_for_load_state("networkidle", timeout=30000)
-                    logger.info("Page loaded successfully")
+                    await save_full_page_screenshot(page, "initial_page")
                 except Exception as e:
-                    logger.warning(f"Page loading timed out, continuing anyway: {str(e)}")
+                    logger.warning(f"Failed to save initial page screenshot: {str(e)}")
                 
-                # Take full page screenshot and save HTML for analysis
-                await save_full_page_screenshot(page, "initial_page")
+                # Handle cookie banners and login prompts
+                await self._handle_cookie_banners(page)
+                await asyncio.sleep(1)
+                await self._handle_login_prompts(page)
+                await asyncio.sleep(1)
                 
-                # Add manual delay to ensure page is fully loaded
-                await asyncio.sleep(5)
-                
-                # Check if we need to click an "Apply" button or similar first
+                # Check if we need to click an "Apply" button first
                 apply_button_found = await check_and_click_apply_button(page)
                 if apply_button_found:
-                    # Wait for navigation after clicking apply button
+                    logger.info("Apply button found and clicked")
                     try:
-                        await page.wait_for_load_state("networkidle", timeout=15000)
-                        # Save screenshot of the application form page
+                        await page.wait_for_load_state("domcontentloaded", timeout=15000)
+                        await asyncio.sleep(3)
+                        
+                        # Save screenshot after clicking apply
                         await save_full_page_screenshot(page, "after_apply_button")
+                        
+                        # Handle any new cookie banners or login prompts
+                        await self._handle_cookie_banners(page)
+                        await self._handle_login_prompts(page)
                     except Exception as e:
-                        logger.warning(f"Page loading after apply button timed out: {str(e)}")
+                        logger.warning(f"Wait for load state after apply button failed: {str(e)}")
                 
-                # Look for common application form patterns and handle them
+                # Look for application form patterns
                 form_found = await detect_and_handle_form_type(page)
                 if not form_found:
                     result["message"] = "Could not detect application form on the page"
                     logger.warning(result["message"])
                     
-                    # Save final screenshot
-                    await save_full_page_screenshot(page, "final_state")
+                    # Analyze page elements for debugging
+                    await self._analyze_page_elements(page)
+                    await save_full_page_screenshot(page, "no_form_detected")
                     
-                    # Keep browser open longer if debug mode is enabled
+                    # Keep browser open for debugging
                     if os.environ.get('DEBUG_MODE') == '1':
-                        logger.info("DEBUG_MODE enabled - keeping browser open for 60 seconds")
-                        await asyncio.sleep(60)
+                        logger.info("DEBUG_MODE enabled - keeping browser open for 30 seconds")
+                        await asyncio.sleep(30)
+                    
                     return result
                 
-                # Step 1: Upload resume FIRST before filling the form
-                # This should trigger auto-population of fields in many application systems
+                # Upload resume first to trigger auto-population
                 resume_uploaded = await prioritize_resume_upload(page, self.user.resume_file_path)
                 result["resume_uploaded"] = resume_uploaded
                 
                 if resume_uploaded:
-                    # Wait for potential auto-fill to happen
                     logger.info("Resume uploaded successfully, waiting for potential autofill...")
                     await asyncio.sleep(5)
-                    await save_full_page_screenshot(page, "after_resume_upload_autofill")
+                    await save_full_page_screenshot(page, "after_resume_upload")
                 
-                # Step 2: Fill in the basic identifier fields (name, email, etc.)
+                # Fill the basic identifier fields
                 await self.form_filler.fill_basic_fields(page, self.user_data)
+                await asyncio.sleep(1)
                 
-                # Step 3: Now fill the rest of the form
+                # Fill the rest of the form fields
                 form_result = await self.form_filler.fill_application_form(page)
                 result["form_completed"] = form_result["success"]
                 result["failed_fields"] = form_result["failed_fields"]
                 
-                # Check if there's a submit button and click it
-                submit_clicked = await find_and_click_submit_button(page)
-                if submit_clicked:
-                    logger.info("Submit button clicked successfully")
-                    
-                    # Wait a bit for submission to complete
-                    await asyncio.sleep(5)
-                    
-                    # Save screenshot of confirmation page
-                    await save_full_page_screenshot(page, "confirmation_page")
+                # Take a screenshot of the completed form
+                await save_full_page_screenshot(page, "filled_form")
                 
-                # Set overall success based on form completion and resume upload
+                # Submit the form if not in debug mode
+                if not os.environ.get('DEBUG_MODE') == '1':
+                    submit_clicked = await find_and_click_submit_button(page)
+                    if submit_clicked:
+                        logger.info("Submit button clicked successfully")
+                        await asyncio.sleep(5)
+                        await save_full_page_screenshot(page, "submission_result")
+                    else:
+                        logger.warning("Could not find submit button")
+                else:
+                    logger.info("DEBUG_MODE enabled - skipping form submission")
+                    submit_clicked = False
+                
+                # Set overall success
                 result["success"] = result["form_completed"]
-                
-                # Keep browser open for manual inspection if requested (dev mode)
-                if os.environ.get('DEBUG_MODE') == '1':
-                    logger.info("DEBUG_MODE enabled - keeping browser open for 30 seconds")
-                    await asyncio.sleep(30)
                 
                 # Set final message
                 if result["success"]:
                     result["message"] = "Application form filled successfully."
                     if submit_clicked:
-                        result["message"] += " Submit button was clicked."
+                        result["message"] += " Form was submitted."
                     logger.info("Application process completed successfully")
                 else:
-                    result["message"] = f"Application partially completed with {len(form_result['failed_fields'])} failed fields."
+                    result["message"] = f"Application partially completed with {len(result['failed_fields'])} failed fields."
                     logger.warning(f"Application process partially completed: {result['message']}")
                 
-                # Close browser
-                await browser.close()
+                # Keep browser open for debugging in debug mode
+                if os.environ.get('DEBUG_MODE') == '1':
+                    logger.info("DEBUG_MODE enabled - keeping browser open for 30 seconds")
+                    await asyncio.sleep(30)
+                
+            except Exception as e:
+                error_message = f"Error during application process: {str(e)}"
+                result["message"] = error_message
+                result["error_details"] = str(e)
+                result["success"] = False
+                logger.error(error_message)
+                
+                # Try to take a screenshot of the error state
+                try:
+                    await save_full_page_screenshot(page, "error_state")
+                except Exception:
+                    logger.warning("Failed to save error state screenshot")
+            
+            finally:
+                # Clean up resources using browser manager
+                await self.browser_manager.cleanup()
                 
         except Exception as e:
-            error_message = f"Error during application process: {str(e)}"
+            error_message = f"Failed to initialize browser: {str(e)}"
             result["message"] = error_message
+            result["error_details"] = str(e)
             result["success"] = False
             logger.error(error_message)
-            
+        
         return result
+    
+    async def _handle_cookie_banners(self, page: Page):
+        """Handle common cookie consent banners"""
+        try:
+            # Common cookie consent button selectors
+            cookie_button_selectors = [
+                'button:has-text("Accept")', 
+                'button:has-text("Accept All")',
+                'button:has-text("I Accept")',
+                'button:has-text("Allow All")',
+                'button:has-text("Agree")',
+                'button:has-text("Accept Cookies")',
+                'button:has-text("Got It")',
+                'button:has-text("Reject")',
+                'button:has-text("Reject All")',
+                'button:has-text("Decline")',
+                'button:has-text("No")',
+                'button:has-text("Close")',
+                '[id*="cookie"] button',
+                '[class*="cookie"] button',
+                '[id*="gdpr"] button',
+                '[class*="gdpr"] button'
+            ]
+            
+            for selector in cookie_button_selectors:
+                try:
+                    # Check if the selector exists and is visible
+                    button = await page.query_selector(selector)
+                    if button and await button.is_visible():
+                        logger.info(f"Found cookie banner button: {selector}")
+                        await button.click()
+                        logger.info("Clicked cookie banner button")
+                        await asyncio.sleep(1)
+                        return True
+                except Exception as e:
+                    logger.debug(f"Error handling cookie selector {selector}: {str(e)}")
+                    continue
+            
+            return False
+        except Exception as e:
+            logger.error(f"Error in cookie banner handler: {str(e)}")
+            return False
+    
+    async def _handle_login_prompts(self, page: Page):
+        """Handle login/signup prompts that might appear"""
+        try:
+            # Common selectors for closing login prompts or skipping sign in
+            login_button_selectors = [
+                'button:has-text("Skip")',
+                'button:has-text("Skip for now")',
+                'button:has-text("Continue without")',
+                'button:has-text("Not now")',
+                'button:has-text("Later")',
+                'button:has-text("Close")',
+                'a:has-text("Skip")',
+                'a:has-text("Continue without")',
+                'a:has-text("No thanks")',
+                '.modal button:has-text("Close")',
+                '.modal .close',
+                '.login-modal .close',
+                '[aria-label="Close"]'
+            ]
+            
+            for selector in login_button_selectors:
+                try:
+                    # Check if the selector exists and is visible
+                    button = await page.query_selector(selector)
+                    if button and await button.is_visible():
+                        logger.info(f"Found login/signup prompt button: {selector}")
+                        await button.click()
+                        logger.info("Clicked login/signup prompt button")
+                        await asyncio.sleep(1)
+                        return True
+                except Exception as e:
+                    logger.debug(f"Error handling login selector {selector}: {str(e)}")
+                    continue
+            
+            return False
+        except Exception as e:
+            logger.error(f"Error in login prompt handler: {str(e)}")
+            return False
+
+    async def _analyze_page_elements(self, page: Page):
+        """Analyze page elements to debug why form detection failed"""
+        try:
+            logger.info("Analyzing page elements to debug form detection issues")
+            
+            # Check for iframes
+            iframes = await page.query_selector_all('iframe')
+            logger.info(f"Found {len(iframes)} iframes on the page")
+            
+            # Check for forms
+            forms = await page.query_selector_all('form')
+            logger.info(f"Found {len(forms)} forms on the page")
+            
+            # Check for input elements
+            inputs = await page.query_selector_all('input')
+            logger.info(f"Found {len(inputs)} input elements on the page")
+            
+            # Check for buttons
+            buttons = await page.query_selector_all('button')
+            logger.info(f"Found {len(buttons)} buttons on the page")
+            
+            # Check page URL (might have redirected)
+            current_url = page.url
+            logger.info(f"Current page URL: {current_url}")
+            
+            # Check for login-related elements
+            login_elements = await page.query_selector_all('*:has-text("login"), *:has-text("sign in"), *:has-text("register"), *:has-text("create account")')
+            if len(login_elements) > 0:
+                logger.info(f"Found {len(login_elements)} login-related elements")
+                logger.warning("Page might require login before accessing application form")
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error analyzing page elements: {str(e)}")
+            return False

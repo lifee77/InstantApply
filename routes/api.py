@@ -26,36 +26,86 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 @api_bp.route('/auto-apply', methods=['POST'])
 @login_required
 def run_command_for_show():
-    import subprocess
-    import shlex
-
-    command = shlex.split("python -m archive.test_integration_real")
-    result = subprocess.run(command, capture_output=True, text=True)
-
-    if result.returncode == 0:
-        return jsonify({'message': 'Applied successfully!'})
-    else:
-        return jsonify({'error': 'There was an error, check the terminal.'}), 500
-
-# def trigger_auto_apply():
-#     """
-#     API Endpoint to trigger the auto-apply process.
-#     This route will fetch the current user's job recommendations,
-#     automatically fill and submit the applications, and mark them as applied.
-#     """
-#     user_id = current_user.id
-#     from application_filler.runner_service import auto_apply_jobs_for_user
-
-#     try:
-#         # Create a new event loop to run the async function
-#         loop = asyncio.new_event_loop()
-#         asyncio.set_event_loop(loop)
-#         loop.run_until_complete(auto_apply_jobs_for_user(user_id))
-#         loop.close()
-#         return jsonify({'message': 'Auto-apply triggered successfully!'}), 200
-#     except Exception as e:
-#         current_app.logger.error(f"Error in auto-apply: {str(e)}")
-#         return jsonify({'error': 'Auto-apply failed'}), 500
+    # Get job recommendations that haven't been applied to yet
+    pending_jobs = JobRecommendation.query.filter_by(user_id=current_user.id, applied=False).limit(5).all()
+    
+    if not pending_jobs:
+        return jsonify({'message': 'No pending job recommendations found. Search for jobs first!'}), 200
+    
+    try:
+        # Set up the async task for application process
+        async def run_application_process():
+            results = []
+            for job in pending_jobs:
+                job_url = job.url
+                if not job_url or not valid_url(job_url):
+                    current_app.logger.warning(f"Invalid job URL: {job_url}")
+                    continue
+                
+                # Initialize ApplicationFiller with the current user's data
+                current_app.logger.info(f"Starting application process for URL: {job_url}")
+                app_filler = ApplicationFiller(current_user, job_url=job_url)
+                
+                # Execute the application filling process
+                result = await app_filler.fill_application()
+                
+                # Log the result
+                if result.get('success'):
+                    current_app.logger.info(f"Successfully applied to job at {job_url}")
+                    
+                    # Mark the job recommendation as applied
+                    job.applied = True
+                    
+                    # Create application record
+                    try:
+                        job_id = job_url.split('/')[-1]  # Extract job ID from URL
+                        application = Application(
+                            user_id=current_user.id,
+                            job_id=job_id,
+                            company=job.company,
+                            position=job.job_title,
+                            status='Submitted',
+                            response_data=str(result),
+                            applied_at=datetime.utcnow()
+                        )
+                        db.session.add(application)
+                        db.session.commit()
+                        current_app.logger.info(f"Created application record for job {job_id}")
+                    except Exception as db_error:
+                        current_app.logger.error(f"Error saving application record: {str(db_error)}")
+                        db.session.rollback()
+                else:
+                    current_app.logger.warning(f"Failed to apply to job: {result.get('message')}")
+                
+                results.append({
+                    'job_title': job.job_title,
+                    'company': job.company,
+                    'success': result.get('success', False),
+                    'message': result.get('message', 'Unknown error')
+                })
+                
+                # Small delay between applications
+                await asyncio.sleep(2)
+            
+            return results
+        
+        # Run the async function
+        current_app.logger.info("Starting async application process")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        results = loop.run_until_complete(run_application_process())
+        loop.close()
+        
+        # Return summary of results
+        successful = sum(1 for r in results if r.get('success'))
+        return jsonify({
+            'message': f'Applied to {successful} out of {len(results)} jobs successfully!',
+            'details': results
+        })
+                
+    except Exception as e:
+        current_app.logger.error(f"Auto-apply process failed with exception: {str(e)}")
+        return jsonify({'error': 'There was an error during the auto-apply process.'}), 500
 
 
 @api_bp.route('/recommendations', methods=['POST'])
@@ -138,22 +188,21 @@ def search():
         
         # Always return the jobs we found even if saving to DB fails
         try:
-            # Only attempt to save to DB if we have the job_recommendations table
+            # Save all jobs to DB instead of limiting to just 10
             saved_jobs = []
             max_retries = 5
             retries = 0
-
-            while len(saved_jobs) < 10 and retries < max_retries:
+            
+            while retries < max_retries:
                 retries += 1
                 if retries > 1:  # Only fetch new results after the first page
                     current_app.logger.info(f"Fetching more jobs (page {retries})")
                     jobs = search_jobs(job_title, location, page=retries)
-
+                
                 for job in jobs:
                     job_url = job.get('url', '').strip()
                     if not job_url:
                         continue
-
                     try:
                         existing = JobRecommendation.query.filter_by(
                             user_id=current_user.id,
@@ -162,7 +211,6 @@ def search():
                         
                         if existing:
                             continue
-
                         recommendation = JobRecommendation(
                             user_id=current_user.id,
                             job_title=job.get('title', ''),
@@ -181,13 +229,18 @@ def search():
                             'url': recommendation.url,
                             'applied': recommendation.applied
                         })
-
-                        if len(saved_jobs) >= 10:
-                            break
                     except Exception as inner_e:
                         # Log but continue processing other jobs
                         current_app.logger.error(f"Error saving job: {str(inner_e)}")
-
+                
+                # If we processed the first page and have enough jobs, stop fetching more pages
+                if retries == 1 and len(jobs) < 20:  # Less than a full page of results
+                    break
+                    
+                # Only continue fetching additional pages if we need more jobs or configured to get all
+                if len(saved_jobs) >= len(jobs):  # We've saved all jobs from current page
+                    break
+            
             try:
                 if saved_jobs:
                     db.session.commit()
@@ -231,201 +284,113 @@ def search_and_recommend():
         current_app.logger.error(f"Error in search-and-recommendations: {str(e)}")
         return jsonify({'error': 'Failed to search and save recommendations'}), 500
 
-@api_bp.route('/apply', methods=['GET'])
+@api_bp.route('/apply', methods=['GET', 'POST'])
 @login_required
-def test_apply():
+def apply_job():
     """
-    Test endpoint for the application filler functionality.
-    Access this via browser to test with a sample job application URL.
+    Apply to a job posting using the ApplicationFiller.
+    Handles login processes, captcha challenges, and form submission
+    using the user's profile data from the database.
     """
-    # Get job URL from query parameter or use default test URL
-    job_url = request.args.get('job_url', 'https://www.linkedin.com/jobs/view/3824957351')
+    if request.method == 'GET':
+        # Get job URL from query parameter if provided
+        job_url = request.args.get('job_url', '')
+        return render_template('auto_apply.html', job_url=job_url)
     
-    # Show initial form if no URL provided in query string and not submitted via form
-    if 'job_url' not in request.args and request.method == 'GET' and 'submit' not in request.args:
-        return f"""
-        <html>
-        <head>
-            <title>ApplicationFiller Test</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }}
-                h1 {{ color: #333; }}
-                form {{ margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }}
-                input[type="text"] {{ width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }}
-                input[type="submit"] {{ padding: 10px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; }}
-                .examples {{ margin-top: 20px; }}
-                .example {{ padding: 5px 0; }}
-            </style>
-        </head>
-        <body>
-            <h1>Test ApplicationFiller</h1>
-            <p>Enter a job application URL to test the automatic application filling:</p>
-            
-            <form action="/api/apply" method="GET">
-                <input type="text" name="job_url" placeholder="Enter job URL" 
-                       value="https://www.linkedin.com/jobs/view/3824957351" style="width:80%">
-                <input type="hidden" name="submit" value="true">
-                <input type="submit" value="Test Application">
-            </form>
-            
-            <div class="examples">
-                <p><strong>Example URLs you can try:</strong></p>
-                <div class="example">
-                    <a href="/api/apply?job_url=https://www.linkedin.com/jobs/view/3824957351">
-                        LinkedIn Job - Software Engineer
-                    </a>
-                </div>
-                <div class="example">
-                    <a href="/api/apply?job_url=https://www.indeed.com/viewjob?jk=79c00d6d31fd4a93">
-                        Indeed Job - Web Developer
-                    </a>
-                </div>
-            </div>
-            
-            <p><em>Note: Set DEBUG_MODE=1 in environment to keep browser open longer for inspection.</em></p>
-        </body>
-        </html>
-        """
-    
-    # Initialize the ApplicationFiller
-    from utils.application_filler import ApplicationFiller
-    app_filler = ApplicationFiller(current_user, job_url=job_url)
-    
-    # Create an async function to run the application filler
-    async def test_fill_application():
-        result = await app_filler.fill_application()
-        return result
-    
-    try:
-        # Run the async function
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(test_fill_application())
-        loop.close()
+    elif request.method == 'POST':
+        # Get the job URL from form data
+        job_url = request.form.get('job_url')
         
-        # Return a simple HTML result for browser viewing
-        html_result = f"""
-        <html>
-        <head>
-            <title>ApplicationFiller Test Result</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }}
-                h1 {{ color: #333; }}
-                .success {{ color: green; }}
-                .error {{ color: red; }}
-                pre {{ background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }}
-                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }}
-            </style>
-        </head>
-        <body>
-            <h1>ApplicationFiller Test Results</h1>
-            <p><strong>URL:</strong> {job_url}</p>
-            <p><strong>Status:</strong> <span class="{'success' if result['success'] else 'error'}">
-                {'SUCCESS' if result['success'] else 'FAILED'}
-            </span></p>
-            <p><strong>Message:</strong> {result['message']}</p>
-            <h2>Complete Response:</h2>
-            <pre>{json.dumps(result, indent=2)}</pre>
+        if not job_url or not valid_url(job_url):
+            return jsonify({'error': 'Please provide a valid job URL'}), 400
+        
+        # Get debug mode flag
+        debug_mode = request.form.get('debug_mode', 'false').lower() == 'true'
+        if debug_mode:
+            os.environ['DEBUG_MODE'] = '1'
+        else:
+            os.environ.pop('DEBUG_MODE', None)
             
-            <a href="/api/apply" class="back-button">Test Another URL</a>
-        </body>
-        </html>
-        """
-        return html_result
-    except Exception as e:
-        error_message = f"ApplicationFiller test failed: {str(e)}"
-        current_app.logger.error(error_message)
-        return f"""
-        <html>
-        <head>
-            <title>ApplicationFiller Test Error</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; padding: 20px; }}
-                h1 {{ color: #333; }}
-                .error {{ color: red; }}
-                pre {{ background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }}
-                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; }}
-            </style>
-        </head>
-        <body>
-            <h1>ApplicationFiller Test Error</h1>
-            <p class="error">{error_message}</p>
-            <h2>Stack Trace:</h2>
-            <pre>{str(e)}</pre>
-            
-            <a href="/api/apply" class="back-button">Test Another URL</a>
-        </body>
-        </html>
-        """
-
-@api_bp.route('/apply', methods=['POST'])
-@login_required
-def apply():
-    data = request.json
-    job_url = data.get('job_url')
-    
-    if not job_url:
-        return jsonify({'error': 'Job URL is required'}), 400
-    
-    # Use current_user instead of querying by user_id
-    user = current_user
-    
-    # Instantiate the ApplicationFiller class using the new modular structure
-    app_filler = ApplicationFiller(user, job_url=job_url)
-    
-    # Define an async function to run the application process
-    async def run_application_process():
         try:
-            # Use the new fill_application method which handles the entire process
-            result = await app_filler.fill_application()
-            return result
-        except Exception as e:
-            current_app.logger.error(f"ApplicationFiller error: {str(e)}")
-            return {
-                "success": False,
-                "message": f"ApplicationFiller failed: {str(e)}",
-                "url": job_url,
-                "user": user.email
-            }
-    
-    try:
-        # Run the async function
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(run_application_process())
-        loop.close()
-        
-        # Create application record in the database
-        if result.get('success'):
-            application = Application(
-                user_id=user.id,
-                job_id=data.get('job_id'),
-                company=data.get('company', 'Unknown'),
-                position=data.get('title', 'Unknown'),
-                status='Submitted',
-                response_data=str(result)
-            )
-            db.session.add(application)
-            db.session.commit()
-            result['application_id'] = application.id
+            # Set up the async task for application process
+            async def run_application_process():
+                # Initialize ApplicationFiller with the current user's data
+                current_app.logger.info(f"Starting application process for URL: {job_url}")
+                app_filler = ApplicationFiller(current_user, job_url=job_url)
+                
+                # Execute the application filling process
+                result = await app_filler.fill_application()
+                
+                # Log the result
+                if result.get('success'):
+                    current_app.logger.info(f"Successfully applied to job at {job_url}")
+                else:
+                    current_app.logger.warning(f"Failed to apply to job: {result.get('message')}")
+                
+                # If successful, create a record in the applications table
+                if result.get('success'):
+                    try:
+                        # Extract job details from result or URL
+                        job_id = job_url.split('/')[-1]  # Extract job ID from URL
+                        company = result.get('company', 'Unknown')
+                        position = result.get('job_title', 'Unknown Position')
+                        
+                        # Create application record
+                        application = Application(
+                            user_id=current_user.id,
+                            job_id=job_id,
+                            company=company,
+                            position=position,
+                            status='Submitted',
+                            response_data=str(result),
+                            applied_at=datetime.utcnow()
+                        )
+                        db.session.add(application)
+                        db.session.commit()
+                        current_app.logger.info(f"Created application record for job {job_id}")
+                        
+                        # Also check if this was from a job recommendation and mark it as applied
+                        recommendation = JobRecommendation.query.filter_by(
+                            user_id=current_user.id,
+                            url=job_url
+                        ).first()
+                        
+                        if recommendation:
+                            recommendation.applied = True
+                            db.session.commit()
+                            current_app.logger.info(f"Marked job recommendation {recommendation.id} as applied")
+                    except Exception as db_error:
+                        current_app.logger.error(f"Error saving application record: {str(db_error)}")
+                        db.session.rollback()
+                
+                return result
             
-            # If this was applied to a job recommendation, mark it as applied
-            if data.get('recommendation_id'):
-                rec = JobRecommendation.query.filter_by(
-                    id=data.get('recommendation_id'),
-                    user_id=user.id
-                ).first()
-                if rec:
-                    rec.applied = True
-                    db.session.commit()
-        
-        return jsonify(result)
-    except Exception as e:
-        current_app.logger.error(f"Application process failed: {str(e)}")
-        return jsonify({
-            'error': 'Failed to apply',
-            'details': str(e)
-        }), 500
+            # Run the async function
+            current_app.logger.info("Starting async application process")
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(run_application_process())
+            loop.close()
+            
+            # Return result as JSON for API response
+            current_app.logger.info("Application process completed")
+            return jsonify({
+                'success': result.get('success', False),
+                'message': result.get('message', 'Unknown error'),
+                'resume_uploaded': result.get('resume_uploaded', False),
+                'form_completed': result.get('form_completed', False),
+                'failed_fields': result.get('failed_fields', []),
+                'job_url': job_url,
+                'screenshot': result.get('screenshot')
+            })
+                
+        except Exception as e:
+            current_app.logger.error(f"Application failed with exception: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': f"Application process failed: {str(e)}",
+                'job_url': job_url
+            }), 500
 
 @api_bp.route('/user', methods=['POST'])
 @login_required
