@@ -1,7 +1,6 @@
 """
 Application Filler module for automatically filling out job applications
 """
-
 import os
 import re
 import json
@@ -19,10 +18,11 @@ from .form_detector import (
     find_submit_button
 )
 from .mappers.field_mapper import map_question_to_field
+from .browser_manager import BrowserManager
 
 logger = logging.getLogger(__name__)
 
-# Add missing functions
+# Existing helper functions
 async def extract_application_questions_async(job_id: str, page: Page) -> List[Dict[str, Any]]:
     """
     Extract application questions from a job application page
@@ -285,29 +285,26 @@ class ApplicationFiller:
         self.browser = None
         self.context = None
         self.page = None
+        self.browser_manager = BrowserManager()
         
     async def _setup_browser(self) -> None:
-        """Set up the playwright browser instance"""
-        playwright = await async_playwright().start()
-        # Adding slow_mo to make actions more visible
-        self.browser = await playwright.chromium.launch(
-            headless=self.headless,
-            slow_mo=50  # Add a small delay between actions for visibility
-        )
-        self.context = await self.browser.new_context(
-            viewport={"width": 1280, "height": 720},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
-        )
-        self.page = await self.context.new_page()
-        
-        # Add debugging event handlers
-        self.page.on("console", lambda msg: logger.debug(f"Browser console: {msg.text}"))
-        self.page.on("pageerror", lambda err: logger.error(f"Browser error: {err}"))
+        """Set up the browser using BrowserManager for improved stability"""
+        try:
+            # Use BrowserManager to create browser, context, and page
+            self.browser, self.context, self.page = await self.browser_manager.create_browser()
+            
+            logger.info(f"Browser setup successful using {self.browser_manager.browser_type}")
+        except Exception as e:
+            logger.error(f"Failed to set up browser: {str(e)}")
+            raise RuntimeError(f"Browser initialization failed: {str(e)}")
     
     async def _close_browser(self) -> None:
         """Close the browser and clean up"""
-        if self.browser:
-            await self.browser.close()
+        try:
+            await self.browser_manager.cleanup()
+        except Exception as e:
+            logger.error(f"Error closing browser: {str(e)}")
+        finally:
             self.browser = None
             self.context = None
             self.page = None
@@ -326,9 +323,9 @@ class ApplicationFiller:
             # Set up browser
             await self._setup_browser()
             
-            # Navigate to the job posting
-            await self.page.goto(self.job_url, wait_until="domcontentloaded")
-            await self.page.wait_for_load_state("networkidle")
+            # Navigate to the job posting with retry mechanism
+            if not await self.browser_manager.navigate_with_retry(self.page, self.job_url):
+                return {"success": False, "message": "Failed to navigate to job URL"}
             
             # Detect form type
             form_type = await detect_form_type(self.page)
@@ -340,7 +337,12 @@ class ApplicationFiller:
                 return {"success": False, "message": "Could not find apply button"}
             
             await apply_button.click()
-            await self.page.wait_for_load_state("networkidle")
+            await self.page.wait_for_load_state("domcontentloaded")
+            try:
+                await self.page.wait_for_load_state("networkidle", timeout=30000)
+            except:
+                # Continue even if network doesn't become fully idle
+                logger.warning("Page didn't reach networkidle state, but continuing")
             
             # Process application forms
             result = await self._fill_application_forms()
