@@ -9,13 +9,13 @@ import asyncio
 from typing import Dict, List, Optional, Any, Tuple
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright, Page, Browser, BrowserContext
-
 from .utils import valid_url, extract_job_id, save_full_page_screenshot
 from .form_detector import (
     detect_form_type, 
     find_apply_button,
     find_next_button,
-    find_submit_button
+    find_submit_button,
+    detect_and_handle_form_type
 )
 from .mappers.field_mapper import map_question_to_field
 from .browser_manager import BrowserManager
@@ -680,7 +680,7 @@ class ApplicationFiller:
             logger.error(f"Error selecting option containing text: {str(e)}")
 
 from .resume_handler import prioritize_resume_upload, handle_resume_upload
-from .form_detector import detect_and_handle_form_type, find_and_click_submit_button
+from .form_detector import find_and_click_submit_button
 from .form_filler import FormFiller
 from .response_generator import ResponseGenerator
 

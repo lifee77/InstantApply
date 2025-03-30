@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Apply to Job URL{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Apply to Job URL</h4>
+                </div>
+                <div class="card-body">
+                    <form id="applyUrlForm">
+                        <div class="form-group">
+                            <label for="job_url">Job URL:</label>
+                            <input type="url" class="form-control" id="job_url" name="job_url" 
+                                placeholder="Enter the full job posting URL" required>
+                            <small class="form-text text-muted">Paste the full URL of the job posting you want to apply to</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="headlessMode" name="headless" checked>
+                                <label class="custom-control-label" for="headlessMode">Show browser window</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary btn-block" id="applyButton">
+                                <i class="fas fa-paper-plane"></i> Apply to Job
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div id="applicationStatus" class="mt-4 d-none">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Application Status</h5>
+                                <div id="statusContent">
+                                    <div class="text-center">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="sr-only">Applying...</span>
+                                        </div>
+                                        <p class="mt-2">Application in progress...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="applicationResults" class="mt-4 d-none">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Application Results</h5>
+                            </div>
+                            <div class="card-body" id="resultsContent">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screenshot Modal -->
+<div class="modal fade" id="screenshotModal" tabindex="-1" role="dialog" aria-labelledby="screenshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshotModalLabel">Application Screenshot</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <img id="screenshotImage" src="" alt="Application Screenshot" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const applyUrlForm = document.getElementById('applyUrlForm');
+        const applyButton = document.getElementById('applyButton');
+        const applicationStatus = document.getElementById('applicationStatus');
+        const applicationResults = document.getElementById('applicationResults');
+        const resultsContent = document.getElementById('resultsContent');
+        const headlessMode = document.getElementById('headlessMode');
+        
+        applyUrlForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            // Get the job URL
+            const jobUrl = document.getElementById('job_url').value;
+            if (!jobUrl) {
+                showAlert('Please enter a valid job URL', 'danger');
+                return;
+            }
+            
+            // Show loading state
+            applyButton.disabled = true;
+            applyButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Applying...';
+            applicationStatus.classList.remove('d-none');
+            applicationResults.classList.add('d-none');
+            
+            // Call the API to apply to the job
+            fetch('/api/apply-single', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    job_url: jobUrl,
+                    headless: !headlessMode.checked // Invert because checkbox label is "Show browser window"
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading state
+                applyButton.disabled = false;
+                applyButton.innerHTML = '<i class="fas fa-paper-plane"></i> Apply to Job';
+                applicationStatus.classList.add('d-none');
+                
+                // Show results
+                applicationResults.classList.remove('d-none');
+                
+                if (data.success) {
+                    // Success case
+                    let resultHtml = `
+                        <div class="alert alert-success">
+                            <strong>Success!</strong> Your application was submitted successfully.
+                        </div>
+                        <div class="mt-3">
+                            <h6>Details:</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item">Job URL: <a href="${jobUrl}" target="_blank">${jobUrl}</a></li>
+                    `;
+                    
+                    if (data.company) {
+                        resultHtml += `<li class="list-group-item">Company: ${data.company}</li>`;
+                    }
+                    
+                    if (data.position) {
+                        resultHtml += `<li class="list-group-item">Position: ${data.position}</li>`;
+                    }
+                    
+                    if (data.resume_uploaded) {
+                        resultHtml += `<li class="list-group-item">Resume uploaded: Yes</li>`;
+                    }
+                    
+                    if (data.form_completed) {
+                        resultHtml += `<li class="list-group-item">Application form completed: Yes</li>`;
+                    }
+                    
+                    resultHtml += `</ul>`;
+                    
+                    // Add screenshot if available
+                    if (data.screenshot) {
+                        resultHtml += `
+                            <div class="mt-3">
+                                <button class="btn btn-info btn-sm" onclick="showScreenshot('${data.screenshot}')">
+                                    <i class="fas fa-image"></i> View Application Screenshot
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
+                    resultHtml += `</div>`;
+                    resultsContent.innerHTML = resultHtml;
+                } else {
+                    // Error case
+                    let resultHtml = `
+                        <div class="alert alert-danger">
+                            <strong>Error!</strong> ${data.message || 'Failed to submit application.'}
+                        </div>
+                        <div class="mt-3">
+                            <h6>Details:</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item">Job URL: <a href="${jobUrl}" target="_blank">${jobUrl}</a></li>
+                    `;
+                    
+                    if (data.error_details) {
+                        resultHtml += `<li class="list-group-item">Error details: ${data.error_details}</li>`;
+                    }
+                    
+                    resultHtml += `</ul>`;
+                    
+                    // Add screenshot if available even for failures
+                    if (data.screenshot) {
+                        resultHtml += `
+                            <div class="mt-3">
+                                <button class="btn btn-info btn-sm" onclick="showScreenshot('${data.screenshot}')">
+                                    <i class="fas fa-image"></i> View Error Screenshot
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
+                    resultHtml += `</div>`;
+                    resultsContent.innerHTML = resultHtml;
+                }
+            })
+            .catch(error => {
+                // Handle network errors
+                applyButton.disabled = false;
+                applyButton.innerHTML = '<i class="fas fa-paper-plane"></i> Apply to Job';
+                applicationStatus.classList.add('d-none');
+                
+                applicationResults.classList.remove('d-none');
+                resultsContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error!</strong> Network error occurred while submitting application.
+                    </div>
+                    <div class="text-muted small mt-2">Error details: ${error.message}</div>
+                `;
+            });
+        });
+        
+        // Function to show alerts
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            `;
+            
+            // Insert at the top of the form
+            applyUrlForm.insertAdjacentElement('beforebegin', alertDiv);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            }, 5000);
+        }
+    });
+    
+    // Function to show screenshot in modal
+    function showScreenshot(screenshotPath) {
+        const screenshotImage = document.getElementById('screenshotImage');
+        screenshotImage.src = '/static/screenshots/' + screenshotPath;
+        
+        $('#screenshotModal').modal('show');
+    }
+</script>
+{% endblock %}

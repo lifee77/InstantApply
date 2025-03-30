@@ -5,6 +5,7 @@ import re
 import logging
 from typing import Dict, List, Optional, Tuple, Any
 from playwright.async_api import Page, ElementHandle
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -279,6 +280,100 @@ async def find_submit_button(page: Page) -> Optional[ElementHandle]:
             
     return None
 
+async def find_and_click_submit_button(page: Page) -> bool:
+    """
+    Find and click the submit button on the page.
+    
+    Args:
+        page: The playwright page object
+        
+    Returns:
+        Boolean indicating whether the submit button was found and clicked.
+    """
+    logger.info("Looking for submit button")
+    
+    # First check for any validation errors before submission
+    validation_errors = await check_form_validation_errors(page)
+    if validation_errors > 0:
+        logger.warning(f"Found {validation_errors} validation errors before submission. Not submitting.")
+        return False
+    
+    # Make sure all required fields are filled before trying to submit
+    empty_required_fields = await page.query_selector_all('input:required:invalid, select:required:invalid, textarea:required:invalid')
+    if empty_required_fields:
+        logger.warning(f"Found {len(empty_required_fields)} empty required fields. Not submitting.")
+        return False
+    
+    # Wait a moment before submission to ensure all async validations complete
+    logger.info("Waiting before submission to ensure form is ready...")
+    await asyncio.sleep(3)
+    
+    # Try to find the submit button
+    submit_button = await find_submit_button(page)
+    
+    if submit_button:
+        logger.info("Submit button found, checking if it's enabled...")
+        # Check if button is enabled
+        is_disabled = await submit_button.get_attribute('disabled')
+        if is_disabled:
+            logger.warning("Submit button is disabled. Form may be incomplete.")
+            return False
+            
+        logger.info("Submit button is enabled, clicking...")
+        try:
+            # Click the submit button
+            await submit_button.click()
+            await page.wait_for_load_state("networkidle", timeout=5000)
+            logger.info("Submit button clicked successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error clicking submit button: {str(e)}")
+            return False
+    else:
+        logger.warning("No submit button found")
+        return False
+
+async def check_form_validation_errors(page: Page) -> int:
+    """
+    Check for form validation errors or missing required fields
+    
+    Args:
+        page: The playwright page object
+        
+    Returns:
+        Number of validation errors found
+    """
+    # Common selectors for validation errors
+    error_selectors = [
+        '.error',
+        '.invalid-feedback',
+        '[aria-invalid="true"]',
+        '.form-error',
+        '.validation-error',
+        '.error-message',
+        'input:invalid',
+        'select:invalid',
+        'textarea:invalid'
+    ]
+    
+    error_count = 0
+    for selector in error_selectors:
+        try:
+            elements = await page.query_selector_all(selector)
+            for element in elements:
+                is_visible = await element.is_visible()
+                if is_visible:
+                    error_count += 1
+                    try:
+                        error_text = await element.inner_text()
+                        logger.warning(f"Validation error: {error_text}")
+                    except:
+                        pass
+        except Exception:
+            pass
+            
+    return error_count
+
 async def detect_and_handle_form_type(page: Page) -> Tuple[str, Dict[str, Any]]:
     """
     Detect the form type and return appropriate handling strategy.
@@ -322,33 +417,3 @@ async def detect_and_handle_form_type(page: Page) -> Tuple[str, Dict[str, Any]]:
         logger.info(f"Generic form handling for type: {form_type}")
     
     return form_type, form_metadata
-
-async def find_and_click_submit_button(page: Page) -> bool:
-    """
-    Find and click the submit button on the page.
-    
-    Args:
-        page: The playwright page object
-        
-    Returns:
-        Boolean indicating whether the submit button was found and clicked.
-    """
-    logger.info("Looking for submit button")
-    
-    # Try to find the submit button
-    submit_button = await find_submit_button(page)
-    
-    if submit_button:
-        logger.info("Submit button found, clicking")
-        try:
-            # Click the submit button
-            await submit_button.click()
-            await page.wait_for_load_state("networkidle", timeout=5000)
-            logger.info("Submit button clicked successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Error clicking submit button: {str(e)}")
-            return False
-    else:
-        logger.warning("No submit button found")
-        return False

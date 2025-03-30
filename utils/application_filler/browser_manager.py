@@ -37,8 +37,8 @@ class BrowserManager:
         system = platform.system()
         
         if system == 'Darwin':  # macOS
-            # MacOS tends to have better stability with WebKit for form filling
-            return 'webkit'
+            # On macOS, Firefox tends to be more stable for automation
+            return 'firefox'
         elif system == 'Windows':
             # Windows typically works best with Chromium
             return 'chromium'
@@ -189,7 +189,7 @@ class BrowserManager:
             # Get browser engine based on platform
             browser_engine = getattr(self.playwright, self.browser_type)
             
-            # Launch browser with appropriate arguments
+            # Launch browser with appropriate arguments - ALWAYS use headful mode for stability
             self.browser = await browser_engine.launch(
                 headless=False,  # Always use headful mode for better stability with forms
                 slow_mo=100,     # Add delay between actions for stability
@@ -216,7 +216,7 @@ class BrowserManager:
             # Set up page handlers
             await self._setup_page_handlers(page)
             
-            logger.info(f"Successfully initialized {self.browser_type} browser")
+            logger.info(f"Successfully initialized {self.browser_type} browser in visible (non-headless) mode")
             return self.browser, self.context, page
             
         except Exception as e:

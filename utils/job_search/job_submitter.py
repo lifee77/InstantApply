@@ -40,6 +40,9 @@ async def submit_application_async(job_id: str, user: User, responses: Dict[str,
             # Wait for application form to load
             await page.wait_for_selector("form", timeout=10000)
             
+            # Track field completion status
+            fields_filled = False
+            
             # Fill out personal information
             try:
                 # Name fields
@@ -75,10 +78,16 @@ async def submit_application_async(job_id: str, user: User, responses: Dict[str,
                         logger.info(f"Uploaded resume file: {temp_file_path}")
                     else:
                         logger.warning("Resume upload field not found")
+                
+                # Set fields filled flag to true after basic fields
+                fields_filled = True
             except Exception as e:
                 logger.warning(f"Standard fields not found: {str(e)}")
             
             # Process each question based on the responses
+            questions_filled = 0
+            questions_total = len(responses) if responses else 0
+            
             for question in responses:
                 try:
                     # Determine question text and type
@@ -112,6 +121,7 @@ async def submit_application_async(job_id: str, user: User, responses: Dict[str,
                                     filled_value = await text_input.input_value()
                                     if filled_value == question_text:
                                         logger.info(f"Confirmed text input for question '{question_text}' is correct.")
+                                        questions_filled += 1
                                     else:
                                         logger.warning(f"Text input for question '{question_text}' is incorrect. Expected: {question_text}, Found: {filled_value}")
                                     continue
@@ -125,6 +135,7 @@ async def submit_application_async(job_id: str, user: User, responses: Dict[str,
                                 filled_value = await textarea.input_value()
                                 if filled_value == question_text:
                                     logger.info(f"Confirmed textarea for question '{question_text}' is correct.")
+                                    questions_filled += 1
                                 else:
                                     logger.warning(f"Textarea for question '{question_text}' is incorrect. Expected: {question_text}, Found: {filled_value}")
                                 continue
@@ -136,24 +147,56 @@ async def submit_application_async(job_id: str, user: User, responses: Dict[str,
                             if answer_label:
                                 await answer_label.click()
                                 logger.info(f"Clicked answer for question '{question_text}': {question_text}")
+                                questions_filled += 1
                                 continue
                 except Exception as e:
                     logger.warning(f"Failed to fill field for question '{question_text}': {str(e)}")
+            
+            # Wait for a moment to ensure all fields are properly filled and registered
+            logger.info(f"Filled {questions_filled}/{questions_total} questions. Waiting before submitting...")
+            await asyncio.sleep(3)  # Add a 3-second pause before submission
+            
+            # Additional check for required fields that might be empty
+            empty_required_fields = await page.query_selector_all('input:invalid, select:invalid, textarea:invalid')
+            if empty_required_fields:
+                logger.warning(f"Found {len(empty_required_fields)} empty required fields before submission")
+                for field in empty_required_fields:
+                    try:
+                        # Try to get some identifier for the field
+                        field_id = await field.get_attribute('id') or await field.get_attribute('name') or "unknown"
+                        field_type = await field.get_attribute('type') or "unknown"
+                        logger.warning(f"Empty required field: {field_id} (type: {field_type})")
+                        
+                        # Try to fill with a default value based on field type
+                        if field_type == "text":
+                            await field.fill("Yes")
+                        elif field_type == "email":
+                            await field.fill(user.email or "test@example.com")
+                        elif field_type == "tel":
+                            await field.fill(user.phone or "5555555555")
+                    except Exception as e:
+                        logger.error(f"Failed to fix empty required field: {str(e)}")
             
             # Find and click the submit button
             try:
                 submit_button = await page.query_selector("//button[contains(text(), 'Submit')]")
                 if submit_button:
-                    await submit_button.click()
-                    
-                    # Wait for confirmation
-                    try:
-                        # Wait for a success message
-                        await page.wait_for_selector("//div[contains(text(), 'Application submitted')]", timeout=10000)
-                        result['success'] = True
-                        result['message'] = 'Application submitted successfully'
-                    except:
-                        result['message'] = 'Submission may have failed, no confirmation element found'
+                    # Before clicking submit, make one final check
+                    if fields_filled or questions_filled > 0:
+                        logger.info("Fields are filled, proceeding with submission")
+                        await submit_button.click()
+                        
+                        # Wait for confirmation
+                        try:
+                            # Wait for a success message
+                            await page.wait_for_selector("//div[contains(text(), 'Application submitted')]", timeout=10000)
+                            result['success'] = True
+                            result['message'] = 'Application submitted successfully'
+                        except:
+                            result['message'] = 'Submission may have failed, no confirmation element found'
+                    else:
+                        logger.warning("Prevented submission because no fields were filled")
+                        result['message'] = 'Did not submit because no fields were filled'
                 else:
                     result['message'] = 'Could not find submit button'
             except Exception as e:

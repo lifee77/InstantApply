@@ -202,9 +202,9 @@
             
             filteredRecommendations = allRecommendations.filter(job => {
                 const matchesSearch = !searchTerm || 
-                    job.title.toLowerCase().includes(searchTerm) || 
+                    job.job_title.toLowerCase().includes(searchTerm) || 
                     job.company.toLowerCase().includes(searchTerm) || 
-                    job.description.toLowerCase().includes(searchTerm);
+                    (job.description && job.description.toLowerCase().includes(searchTerm));
                 
                 const matchesLocation = !selectedLocation || 
                     job.location.toLowerCase() === selectedLocation;
@@ -228,9 +228,9 @@
                     case 'match_score_asc':
                         return a.match_score - b.match_score;
                     case 'date_desc':
-                        return new Date(b.date_posted) - new Date(a.date_posted);
+                        return new Date(b.recommended_at) - new Date(a.recommended_at);
                     case 'date_asc':
-                        return new Date(a.date_posted) - new Date(b.date_posted);
+                        return new Date(a.recommended_at) - new Date(b.recommended_at);
                     default:
                         return b.match_score - a.match_score;
                 }
@@ -263,19 +263,28 @@
             pageRecommendations.forEach(job => {
                 const recommendationElement = template.content.cloneNode(true);
                 
-                recommendationElement.querySelector('.job-title').textContent = job.title;
+                recommendationElement.querySelector('.job-title').textContent = job.job_title;
                 recommendationElement.querySelector('.company-name').textContent = job.company;
                 recommendationElement.querySelector('.job-location').textContent = job.location;
                 recommendationElement.querySelector('.job-description').textContent = job.description || 'No description available';
                 recommendationElement.querySelector('.match-score').textContent = `Match: ${Math.round(job.match_score * 100)}%`;
-                recommendationElement.querySelector('.job-date').textContent = formatDate(job.date_posted);
+                recommendationElement.querySelector('.job-date').textContent = formatDate(job.recommended_at);
                 
                 const viewDetailsLink = recommendationElement.querySelector('.view-job-details');
                 viewDetailsLink.href = job.url;
                 viewDetailsLink.target = '_blank';
                 
                 const applyButton = recommendationElement.querySelector('.apply-btn');
-                applyButton.addEventListener('click', () => initiateApplication(job.id));
+                
+                // Disable apply button if already applied
+                if (job.applied) {
+                    applyButton.disabled = true;
+                    applyButton.classList.remove('btn-success');
+                    applyButton.classList.add('btn-secondary');
+                    applyButton.innerHTML = '<i class="fas fa-check"></i> Applied';
+                } else {
+                    applyButton.addEventListener('click', () => initiateApplication(job.id, job.url));
+                }
                 
                 recommendationsList.appendChild(recommendationElement);
             });
@@ -385,9 +394,78 @@
             });
         }
         
-        function initiateApplication(jobId) {
-            // Redirect to application page or open application modal
-            window.location.href = `/applications/apply?job_id=${jobId}`;
+        function initiateApplication(jobId, jobUrl) {
+            // Show loading state on button
+            const button = event.target.closest('.apply-btn');
+            const originalButtonText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Applying...';
+            
+            // Call our new API endpoint for single job application
+            fetch('/api/apply-single', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    job_id: jobId,
+                    job_url: jobUrl
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update button to show success
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-secondary');
+                    button.innerHTML = '<i class="fas fa-check"></i> Applied';
+                    
+                    // Show success notification
+                    showNotification('Success', 'Application submitted successfully!', 'success');
+                    
+                    // Update local data
+                    allRecommendations.forEach(job => {
+                        if (job.id === jobId) {
+                            job.applied = true;
+                        }
+                    });
+                    
+                    // Refresh the current view
+                    renderRecommendations();
+                } else {
+                    // Show error and reset button
+                    button.disabled = false;
+                    button.innerHTML = originalButtonText;
+                    showNotification('Error', data.message || 'Failed to submit application', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error applying to job:', error);
+                button.disabled = false;
+                button.innerHTML = originalButtonText;
+                showNotification('Error', 'An unexpected error occurred', 'danger');
+            });
+        }
+        
+        function showNotification(title, message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show notification-toast`;
+            notification.innerHTML = `
+                <strong>${title}</strong>: ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            `;
+            
+            // Add to document
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
         }
         
         function showLoader() {
@@ -430,4 +508,13 @@
         }
     });
 </script>
+<style>
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+        min-width: 300px;
+    }
+</style>
 {% endblock %}

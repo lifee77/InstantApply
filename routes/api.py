@@ -558,3 +558,178 @@ def get_applications(user_id):
 @login_required
 def apply_page():
     return render_template('auto_apply.html')
+
+@api_bp.route('/apply-single', methods=['POST'])
+@login_required
+def apply_single_job():
+    """
+    Apply to a single job posting by ID or URL
+    This endpoint handles both real job URLs and mock job URLs
+    
+    Request body:
+    {
+        "job_id": 123,           // Optional job recommendation ID
+        "job_url": "https://...", // Optional job URL (required if job_id is not provided)
+        "headless": false         // Optional boolean to control browser visibility
+    }
+    """
+    data = request.json
+    job_id = data.get('job_id')
+    job_url = data.get('job_url')
+    headless = data.get('headless', False)  # Default to visible browser
+    
+    if not job_id and not job_url:
+        return jsonify({'error': 'Either job_id or job_url must be provided'}), 400
+    
+    # If job_id is provided but not job_url, look up the recommendation
+    if job_id and not job_url:
+        recommendation = JobRecommendation.query.filter_by(
+            id=job_id, 
+            user_id=current_user.id
+        ).first()
+        
+        if not recommendation:
+            return jsonify({'error': 'Job recommendation not found'}), 404
+        
+        job_url = recommendation.url
+    
+    # Check if this is a mock URL (example.com)
+    is_mock = 'example.com' in job_url
+    
+    if is_mock:
+        # For mock URLs, create a test job application page on localhost
+        current_app.logger.info(f"Mock job URL detected: {job_url}")
+        
+        # Use the stored recommendation as mock data
+        if job_id:
+            recommendation = JobRecommendation.query.filter_by(
+                id=job_id, 
+                user_id=current_user.id
+            ).first()
+            
+            if recommendation:
+                # Create a successful mock application
+                current_app.logger.info(f"Creating mock successful application for job ID {job_id}")
+                
+                # Mark as applied
+                recommendation.applied = True
+                
+                # Create application record
+                application = Application(
+                    user_id=current_user.id,
+                    job_id=str(job_id),
+                    company=recommendation.company,
+                    position=recommendation.job_title,
+                    status='Submitted',
+                    response_data='{"success": true, "message": "Mock application successful"}',
+                    applied_at=datetime.utcnow()
+                )
+                
+                db.session.add(application)
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Mock application submitted successfully',
+                    'job_id': job_id,
+                    'company': recommendation.company,
+                    'position': recommendation.job_title
+                })
+            else:
+                return jsonify({'error': 'Job recommendation not found'}), 404
+        else:
+            # Generic mock success for URL-only applications
+            return jsonify({
+                'success': True,
+                'message': 'Mock application submitted successfully',
+                'job_url': job_url
+            })
+    
+    # For real URLs, use the ApplicationFiller
+    try:
+        # Set up the async task for application process
+        async def run_application_process():
+            # Initialize ApplicationFiller with the current user's data
+            current_app.logger.info(f"Starting application process for URL: {job_url}")
+            
+            # Use the headless parameter provided in the request
+            app_filler = ApplicationFiller(current_user, job_url=job_url, headless=headless)
+            
+            # Execute the application filling process
+            result = await app_filler.fill_application()
+            
+            # Log the result
+            if result.get('success'):
+                current_app.logger.info(f"Successfully applied to job at {job_url}")
+                
+                # If we have a job_id, mark the recommendation as applied
+                if job_id:
+                    recommendation = JobRecommendation.query.filter_by(
+                        id=job_id,
+                        user_id=current_user.id
+                    ).first()
+                    
+                    if recommendation:
+                        recommendation.applied = True
+                        db.session.commit()
+            else:
+                current_app.logger.warning(f"Failed to apply to job: {result.get('message')}")
+            
+            return result
+        
+        # Run the async function
+        current_app.logger.info("Starting async application process")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(run_application_process())
+        loop.close()
+        
+        # If successful, create a record in the applications table
+        if result.get('success'):
+            try:
+                # Extract job details from result
+                company = result.get('company', 'Unknown')
+                position = result.get('job_title', 'Unknown Position')
+                
+                # Create application record
+                application = Application(
+                    user_id=current_user.id,
+                    job_id=job_id or job_url.split('/')[-1],  # Use provided job_id or extract from URL
+                    company=company,
+                    position=position,
+                    status='Submitted',
+                    response_data=str(result),
+                    applied_at=datetime.utcnow()
+                )
+                db.session.add(application)
+                db.session.commit()
+                
+                # Add company and position to the result for display
+                result['company'] = company
+                result['position'] = position
+            except Exception as db_error:
+                current_app.logger.error(f"Error saving application record: {str(db_error)}")
+                db.session.rollback()
+        
+        # Return result to frontend
+        return jsonify({
+            'success': result.get('success', False),
+            'message': result.get('message', 'Unknown error'),
+            'job_id': job_id,
+            'job_url': job_url,
+            'screenshot': result.get('screenshot'),
+            'company': result.get('company', 'Unknown'),
+            'position': result.get('position', 'Unknown Position'),
+            'resume_uploaded': result.get('resume_uploaded', False),
+            'form_completed': result.get('form_completed', False)
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Application failed with exception: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f"Application process failed",
+            'error_details': str(e),
+            'job_id': job_id,
+            'job_url': job_url
+        }), 500
