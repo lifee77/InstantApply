@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstantApply | Checkout</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="stylesheet" href="static/css/checkout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="top-header">
+        <div class="brand">InstantApply</div>
+        <nav>
+            <ul class="nav-left">
+                <li><a href="/profile">Profile</a></li>
+                <li><a href="/dashboard">Home</a></li>
+                <li><a href="/applications">My Applications</a></li>
+            </ul>
+            <ul class="nav-right">
+                <li><a href="/logout">Log Out</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="page-container">
+        <!-- LEFT COLUMN -->
+        <div class="info-section">
+            <div class="headline-container">
+                <h1>Apply to 300+ jobs in minutes</h1>
+                <div class="rating">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star-half-alt"></i>
+                    </div>
+                    <span>4.8/5 (237 reviews)</span>
+                </div>
+                <p class="subtitle">AI-powered job applications for busy professionals</p>
+            </div>
+
+            <div class="media-container">
+                <div class="video-wrapper">
+                    <video id="demo-video" controls poster="static/images/video-poster.jpg">
+                        <source src="static/video/demo.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="process-section">
+                <h2>How it works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <div class="step-content">
+                            <h3>1. Upload Resume</h3>
+                            <p>Our AI parses your resume and extracts all relevant information automatically.</p>
+                        </div>
+                        <img src="static/images/step1.jpg" alt="Upload Resume" class="step-image">
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                        <div class="step-content">
+                            <h3>2. Complete Profile</h3>
+                            <p>Answer a few additional questions commonly asked in applications.</p>
+                        </div>
+                        <img src="static/images/step2.jpg" alt="Complete Profile" class="step-image">
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="step-content">
+                            <h3>3. Select Job Titles</h3>
+                            <p>Choose the positions that match your skills and experience.</p>
+                        </div>
+                        <img src="static/images/step3.jpg" alt="Select Job Titles" class="step-image">
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <div class="step-content">
+                            <h3>4. One Click Apply</h3>
+                            <p>Our AI sends personalized applications to hundreds of matching positions.</p>
+                        </div>
+                        <img src="static/images/step4.jpg" alt="One Click Apply" class="step-image">
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonials">
+                <h2>What our users say</h2>
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        <p>"I found my dream job in just 2 weeks after using OneClick. The AI tailored each application perfectly!"</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <img src="static/images/testimonial1.jpg" alt="Sarah K.">
+                        <div>
+                            <h4>Sarah K.</h4>
+                            <p>Software Engineer</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="checkout-section">
+            <div class="checkout-container">
+                <div class="checkout-header">
+                    <h2>Start your job search today</h2>
+                </div>
+
+                <div class="pricing-box">
+                    <div class="pricing-top">
+                        <div class="original-price">
+                            <span class="original" id="original-price" style="display: none;">$150</span>
+                            <span class="current-price" id="price">$150</span>
+                        </div>
+                        <div class="pricing-badge" id="discount-badge" style="display: none;">
+                            <span>53% OFF</span>
+                        </div>
+                    </div>
+
+                    <ul class="features">
+                        <li><i class="fas fa-check-circle"></i> Apply to 300+ relevant positions</li>
+                        <li><i class="fas fa-check-circle"></i> AI-customized cover letters</li>
+                        <li><i class="fas fa-check-circle"></i> Automated follow-up emails</li>
+                        <li><i class="fas fa-check-circle"></i> Interview scheduling assistance</li>
+                        <li><i class="fas fa-check-circle"></i> 30-day support</li>
+                    </ul>
+
+                    <div class="promo-section">
+                        <label for="promo">Have a promo code?</label>
+                        <div class="promo-input-group">
+                            <input type="text" id="promo" class="promo-input" placeholder="Enter code">
+                            <button onclick="applyPromo()" class="promo-button">Apply</button>
+                        </div>
+                        <p class="promo-success" id="promo-success" style="display: none;">Promo code applied successfully!</p>
+                        <p class="promo-error" id="error-msg" style="display: none;">Invalid promo code</p>
+                    </div>
+
+                    <button id="pay-button" class="pay-button" onclick="startPayment()">
+                        <span class="pay-text">Checkout Now</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+
+                    <div class="secure-badge">
+                        <i class="fas fa-lock"></i>
+                        <span>Secure Checkout</span>
+                    </div>
+
+                    <div class="payment-methods">
+                        <img src="static/images/visa.svg" alt="Visa">
+                        <img src="static/images/mastercard.svg" alt="Mastercard">
+                        <img src="static/images/amex.svg" alt="American Express">
+                        <img src="static/images/paypal.svg" alt="PayPal">
+                    </div>
+                </div>
+
+                <div id="loading-container" class="loading-container" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p>Processing your request...</p>
+                </div>
+
+                <div id="email-form" class="email-form" style="display: none;">
+                    <div class="notice-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <h3>High Demand Notice</h3>
+                    <p>We're currently experiencing unprecedented demand for our service. To ensure the highest quality of job applications, we're temporarily limiting new sign-ups.</p>
+                    <p>Enter your email below to reserve your spot and get notified as soon as we can process your application.</p>
+                    <div class="email-input-group">
+                        <input type="email" placeholder="Your email address" class="email-input">
+                        <button class="notify-button" onclick="submitEmail()">Notify Me</button>
+                    </div>
+                    <p class="guarantee">We'll notify you within 24 hours.</p>
+                </div>
+            </div>
+
+            <div class="trust-indicators">
+                <div class="guarantee-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>100% Money-Back Guarantee</span>
+                </div>
+                <div class="satisfaction">
+                    <div class="satisfaction-data">
+                        <div class="data-number">96%</                        <div class="data-label">Success Rate</div>
+                    </div>
+                    <div class="satisfaction-data">
+                        <div class="data-number">14</div>
+                        <div class="data-label">Days Average</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="static/images/logo.svg" alt="OneClick Jobs">
+                    <p>Helping professionals find their dream jobs faster.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="link-group">
+                        <h3>Company</h3>
+                        <ul>
+                            <li><a href="#">About Us</a></li>
+                            <li><a href="#">Careers</a></li>
+                            <li><a href="#">Blog</a></li>
+                            <li><a href="#">Press</a></li>
+                        </ul>
+                    </div>
+                    <div class="link-group">
+                        <h3>Resources</h3>
+                        <ul>
+                            <li><a href="#">Success Stories</a></li>
+                            <li><a href="#">Resume Tips</a></li>
+                            <li><a href="#">Interview Prep</a></li>
+                            <li><a href="#">Job Market</a></li>
+                        </ul>
+                    </div>
+                    <div class="link-group">
+                        <h3>Support</h3>
+                        <ul>
+                            <li><a href="#">FAQ</a></li>
+                            <li><a href="#">Contact Us</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Privacy Policy</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="footer-social">
+                    <h3>Connect with us</h3>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 OneClick Jobs. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="static/js/script.js"></script>
+    <script src="static/js/checkout.js"></script>
+</body>
+</html>
